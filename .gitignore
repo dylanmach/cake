@@ -21,3 +21,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+#jupyter file checkpoints
+/algo_testing/.ipynb_checkpoints
