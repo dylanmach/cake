@@ -1,6 +1,6 @@
 import { Portion, Slice } from "../../types";
 
-export type AlgoName = 'cutAndChoose' | 'selfridgeConway' | 'barbanelBrams' ;
+export type AlgoName = 'cutAndChoose' | 'selfridgeConway' | 'branzeiNisan' ;
 
 export interface Algorithm {
   key: AlgoName
@@ -50,9 +50,9 @@ export const Algorithms: Record<AlgoName, Algorithm> = {
       'A method for envy-free division between three people. Maximum of five cuts.',
     link: '/learn/13',
   },
-  barbanelBrams: {
-    key: 'barbanelBrams',
-    name: 'Barbanel-Brams',
+  branzeiNisan: {
+    key: 'branzeiNisan',
+    name: 'Branzei-Nisan',
     numAgentsText: '3 people',
     minAgents: 3,
     maxAgents: 3,

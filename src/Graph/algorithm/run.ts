@@ -3,7 +3,7 @@ import { Preferences, AssignedSlice, Portion } from '../../types'
 import { validateSegments } from './validation'
 import { cutAndChoose } from './cutAndChoose'
 import { selfridgeConway } from './selfridgeConway'
-import { barbanelBrams } from './barbanelBrams'
+import { branzeiNisan } from './branzeiNisan'
 import { getTotalValue } from './getValue'
 
 export const runDivisionAlgorithm = async (
@@ -31,8 +31,8 @@ export const runDivisionAlgorithm = async (
     case 'selfridgeConway':
       result = selfridgeConway(preferences, cakeSize)
       break
-    //case 'barbanelBrams':
-    //  result = barbanelBrams(preferences, cakeSize)
+    //case 'branzeiNisan':
+    //  result = branzeiNisan(preferences, cakeSize)
     //  break
     // NOTE FOR FUTURE DEVS
     // If server-side methods are implemented,

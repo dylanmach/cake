@@ -10,7 +10,7 @@ import axios from 'axios'
 // Selfridge-Conway method use a 1-based index because that's, you know, normal.
 
 
-export const barbanelBrams = async (preferences: Preferences, cakeSize: number): 
+export const branzeiNisan = async (preferences: Preferences, cakeSize: number): 
 Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
   try {
     const response = await axios.post('/api/run_algorithm', { preferences, cakeSize });
