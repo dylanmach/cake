@@ -31,9 +31,9 @@ export const runDivisionAlgorithm = async (
     case 'selfridgeConway':
       result = selfridgeConway(preferences, cakeSize)
       break
-    //case 'branzeiNisan':
-    //  result = branzeiNisan(preferences, cakeSize)
-    //  break
+    case 'branzeiNisan':
+      result = await branzeiNisan(preferences, cakeSize)
+      break
     // NOTE FOR FUTURE DEVS
     // If server-side methods are implemented,
     // be sure to `await` the asynchronous response as shown here:
