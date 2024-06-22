@@ -20,34 +20,30 @@ def run_algorithm():
 
 
 #Preprocessing Below
+
 def normalization(prefs):
     '''
     Ensures that each agents values the
     '''
     #Need to change.
-    agents = np.shape(prefs)[0]
-    segments = np.shape(prefs)[1]
+    agents = len(prefs)
     normalization_constants = np.zeros(agents)
     for i in range(agents):
         normalization_constants[i] = value_query_initial(i, prefs, 0, 1)
-        for j in range(segments):
-            if prefs[i][j] is not None:
-                prefs[i][j]['startValue'] /= normalization_constants[i]
-                prefs[i][j]['endValue'] /= normalization_constants[i]
+        for segments in prefs[i]:
+            segments['startValue'] /= normalization_constants[i]
+            segments['endValue'] /= normalization_constants[i]
     return prefs#, normalizationConstants
         
 
 def change_bounds(prefs, cakeSize):
-    agents = np.shape(prefs)[0]
-    segments = np.shape(prefs)[1]
-    for i in range(agents):
-        for j in range(segments):
+    for agents in prefs:
+        for segments in agents:
             app.logger.debug("hello")
-            app.logger.debug(type(prefs[i][j]))
-            app.logger.debug(prefs[i][j])
-            if prefs[i][j] is not None:
-                prefs[i][j]['start'] /= cakeSize
-                prefs[i][j]['end'] /= cakeSize
+            app.logger.debug(type(segments))
+            app.logger.debug(segments)
+            segments['start'] /= cakeSize
+            segments['end'] /= cakeSize
     return prefs
 
 
