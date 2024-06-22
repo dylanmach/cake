@@ -2,10 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 
-epsilon = 0.0025
-
 app = Flask(__name__)
 CORS(app)  # Enable CORS for cross-origin requests
+
+epsilon = 0.0025
 
 @app.route('/api/run_algorithm', methods=['POST'])
 def run_algorithm():
@@ -15,8 +15,8 @@ def run_algorithm():
     
     # Call your algorithm function with preferences and cake_size
     result = branzei_nisan(preferences, cake_size)
-    
-    return jsonify({'result': result})
+    result_as_dict = [result.left, result.right]
+    return jsonify({'result': result_as_dict})
 
 
 #Preprocessing Below
@@ -32,8 +32,8 @@ def normalization(prefs):
         normalization_constants[i] = value_query_initial(i, prefs, 0, 1)
         for j in range(segments):
             if prefs[i][j] is not None:
-                prefs[i][j].startvalue /= normalization_constants[i]
-                prefs[i][j].endvalue /= normalization_constants[i]
+                prefs[i][j]['startValue'] /= normalization_constants[i]
+                prefs[i][j]['endValue'] /= normalization_constants[i]
     return prefs#, normalizationConstants
         
 
@@ -42,9 +42,12 @@ def change_bounds(prefs, cakeSize):
     segments = np.shape(prefs)[1]
     for i in range(agents):
         for j in range(segments):
+            app.logger.debug("hello")
+            app.logger.debug(type(prefs[i][j]))
+            app.logger.debug(prefs[i][j])
             if prefs[i][j] is not None:
-                prefs[i][j].start /= cakeSize
-                prefs[i][j].end /= cakeSize
+                prefs[i][j]['start'] /= cakeSize
+                prefs[i][j]['end'] /= cakeSize
     return prefs
 
 
@@ -63,36 +66,36 @@ def interpolate(segment, x_coordinate):
     Uses the linear interpolation formula to find the associated y-coordinate for a 
     given x-coordinate on a line between two points with known x and y coordinates.
     '''
-    if segment.startvalue == segment.endvalue:
-        y_coordinate = segment.startvalue
+    if segment['startValue'] == segment['endValue']:
+        y_coordinate = segment['startValue']
         return y_coordinate
-    if segment.startvalue != segment.endvalue:
-        y_coordinate = ((segment.startvalue * (segment.end - x_coordinate) +
-                         segment.endvalue * (x_coordinate - segment.start)) / 
-                        (segment.end - segment.start))                
+    if segment['startValue'] != segment['endValue']:
+        y_coordinate = ((segment['startValue'] * (segment['end'] - x_coordinate) +
+                         segment['endValue'] * (x_coordinate - segment['start'])) / 
+                        (segment['end'] - segment['start']))                
         return y_coordinate
     
 
 
 def find_partial_value(segment, partial_segment_end):
-    segment_width = partial_segment_end - segment.start
+    segment_width = partial_segment_end - segment['start']
     partial_segment_end_value = interpolate(segment, partial_segment_end)
-    if segment.startvalue == segment.endvalue:
-        value = segment.startvalue * segment_width
+    if segment['startValue'] == segment['endValue']:
+        value = segment['startValue'] * segment_width
         return value
-    if segment.startvalue != segment.endvalue:
-        value = 0.5 * (segment.startvalue + partial_segment_end_value) * \
+    if segment['startValue'] != segment['endValue']:
+        value = 0.5 * (segment['startValue'] + partial_segment_end_value) * \
                 segment_width
         return value
     
 
 def find_full_value(segment):
-    segment_width = segment.end - segment.start
-    if segment.startvalue == segment.endvalue:
-        value = segment.startvalue * segment_width
+    segment_width = segment['end'] - segment['start']
+    if segment['startValue'] == segment['endValue']:
+        value = segment['startValue'] * segment_width
         return value
-    if segment.startvalue != segment.endvalue:
-        value = 0.5 * (segment.startvalue + segment.endvalue) * segment_width
+    if segment['startValue'] != segment['endValue']:
+        value = 0.5 * (segment['startValue'] + segment['endValue']) * segment_width
         return value
     
 
@@ -100,9 +103,9 @@ def one_sided_query(agent, prefs, end):
     segments = np.size(prefs[agent])
     value = 0
     for i in range(segments):
-        if end > prefs[agent][i].end:
+        if end > prefs[agent][i]['end']:
             value += find_full_value(prefs[agent][i])
-        if end <= prefs[agent][i].end:
+        if end <= prefs[agent][i]['end']:
             value += find_partial_value(prefs[agent][i], end)
             return value
         
@@ -449,7 +452,7 @@ def find_middle_slice_values(agent, prefs, division, agents_number, epsilon):
                                       division.middle, epsilon)
         slice_three_value = value_query(agent, prefs, division.middle, 
                                       division.right, epsilon)
-        middle_slice_values = np.array([slice_two_value, slice_two_value])
+        middle_slice_values = np.array([slice_two_value, slice_three_value])
     return middle_slice_values
 
 
@@ -975,7 +978,7 @@ def check_invariant_four_agents(prefs, alpha, epsilon, return_division = False):
         return False
     
 
-def branzei_nisan(prefs, cakeSize, epsilon):
+def branzei_nisan(prefs, cakeSize):
     prefs = one_lipschitz(prefs, cakeSize)
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 3, epsilon)
     if check_equipartition_envy_free_three_agents(prefs, alpha_lower_bound, 3,
@@ -992,7 +995,7 @@ def branzei_nisan(prefs, cakeSize, epsilon):
     return division_three_agents(prefs, alpha_bounds.lower, epsilon)
 
 
-def hollender_rubinstein(prefs, cakeSize, epsilon):
+def hollender_rubinstein(prefs, cakeSize):
     prefs = one_lipschitz(prefs, cakeSize)
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 4, epsilon)
     if check_equipartition_envy_free_four_agents(prefs, alpha_lower_bound, 4,
@@ -1036,4 +1039,4 @@ class FourAgentPortion:
 
         
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
