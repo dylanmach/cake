@@ -1,4 +1,4 @@
-export const maxAgents = 3
+export const maxAgents = 4
 export const defaultCakeSize = 100
 
 // Graph sizes and margin are used too widely and in things besides graphs, not good.
