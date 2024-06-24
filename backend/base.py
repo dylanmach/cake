@@ -619,8 +619,7 @@ def condition_a_check(slice, prefs, alpha, division, epsilon):
                 (agent_slice_values[j][slice-1] == np.max(agent_slice_values[j])) and \
                 (agent_slice_values[0][slice-1] <= alpha)):
                 return True
-            else:
-                return False
+    return False
             
 
 def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = False):
