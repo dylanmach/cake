@@ -7,8 +7,8 @@ CORS(app)  # Enable CORS for cross-origin requests
 
 epsilon = 0.0025
 
-@app.route('/api/run_algorithm', methods=['POST'])
-def run_algorithm():
+@app.route('/api/three_agent', methods=['POST'])
+def three_agent():
     data = request.json
     preferences = data.get('preferences')
     cake_size = data.get('cakeSize')
@@ -18,6 +18,16 @@ def run_algorithm():
     result_as_dict = [result.left, result.right]
     return jsonify({'result': result_as_dict})
 
+@app.route('/api/four_agent', methods=['POST'])
+def four_agent():
+    data = request.json
+    preferences = data.get('preferences')
+    cake_size = data.get('cakeSize')
+    
+    # Call your algorithm function with preferences and cake_size
+    result = hollender_rubinstein(preferences, cake_size)
+    result_as_dict = [result.left, result.middle, result.right]
+    return jsonify({'result': result_as_dict})
 
 #Preprocessing Below
 
