@@ -4,6 +4,7 @@ import { validateSegments } from './validation'
 import { cutAndChoose } from './cutAndChoose'
 import { selfridgeConway } from './selfridgeConway'
 import { branzeiNisan } from './branzeiNisan'
+import { hollenderRubinstein } from './hollenderRubinstein'
 import { getTotalValue } from './getValue'
 
 export const runDivisionAlgorithm = async (
@@ -33,6 +34,9 @@ export const runDivisionAlgorithm = async (
       break
     case 'branzeiNisan':
       result = await branzeiNisan(preferences, cakeSize)
+      break
+    case 'hollenderRubinstein':
+      result = await hollenderRubinstein(preferences, cakeSize)
       break
     // NOTE FOR FUTURE DEVS
     // If server-side methods are implemented,

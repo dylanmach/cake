@@ -1,6 +1,6 @@
 import { Portion, Slice } from "../../types";
 
-export type AlgoName = 'cutAndChoose' | 'selfridgeConway' | 'branzeiNisan' ;
+export type AlgoName = 'cutAndChoose' | 'selfridgeConway' | 'branzeiNisan' | 'hollenderRubinstein';
 
 export interface Algorithm {
   key: AlgoName
@@ -57,7 +57,17 @@ export const Algorithms: Record<AlgoName, Algorithm> = {
     minAgents: 3,
     maxAgents: 3,
     shortDescription:
-      'A method for envy-free division between three people. Maximum of two cuts.',
+      'A method for approximate envy-free division between three people. Maximum of two cuts.',
+    link: '/TBD',
+  },
+  hollenderRubinstein: {
+    key: 'hollenderRubinstein',
+    name: 'Hollender-Rubinstein',
+    numAgentsText: '4 people',
+    minAgents: 4,
+    maxAgents: 4,
+    shortDescription:
+      'A method for approximate envy-free division between three people. Maximum of two cuts.',
     link: '/TBD',
   },
 }
