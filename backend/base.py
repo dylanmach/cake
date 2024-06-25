@@ -5,7 +5,8 @@ import numpy as np
 app = Flask(__name__)
 CORS(app)  # Enable CORS for cross-origin requests
 
-epsilon = 0.0025
+MAX_VALUATION = 10
+epsilon = 0.0025 / MAX_VALUATION
 
 @app.route('/api/three_agent', methods=['POST'])
 def three_agent():
@@ -36,13 +37,10 @@ def normalization(prefs):
     Ensures that each agents values the
     '''
     #Need to change.
-    agents = len(prefs)
-    normalization_constants = np.zeros(agents)
-    for i in range(agents):
-        normalization_constants[i] = value_query_initial(i, prefs, 0, 1)
-        for segments in prefs[i]:
-            segments['startValue'] /= normalization_constants[i]
-            segments['endValue'] /= normalization_constants[i]
+    for agents in prefs:
+        for segments in agents:
+            segments['startValue'] /= MAX_VALUATION
+            segments['endValue'] /= MAX_VALUATION
     return prefs#, normalizationConstants
         
 
@@ -616,9 +614,9 @@ def condition_a_check(slice, prefs, alpha, division, epsilon):
             if j == i:
                 continue
             if (np.isclose(agent_slice_values[i][slice-1], 
-                           np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 120) and \
+                           np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 12) and \
                 np.isclose(agent_slice_values[j][slice-1], 
-                           np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 120) and \
+                           np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 12) and \
                 (agent_slice_values[0][slice-1] <= alpha)):
                 return True
     return False
@@ -710,9 +708,9 @@ def condition_b_check(slices, prefs, alpha, division, epsilon):
                 if j == i:
                     continue
                 if (np.isclose(agent_slice_values[i][slices[s]-1], 
-                               np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 120) and \
+                               np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 12) and \
                     (np.isclose(agent_slice_values[j][slices[s]-1], 
-                                np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 120) and \
+                                np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 12) and \
                     (agent_slice_values[0][slices[s]-1] <= alpha))):
                     slice_check[s] = True
     if (slice_check[0] == True and slice_check[1] == True):
@@ -999,13 +997,14 @@ def branzei_nisan(prefs, cakeSize):
         return equipartition
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
-    while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon/10)**4)/12:
+    while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
         alpha = alpha_bounds.midpoint()
         if check_invariant_three_agents(prefs, alpha, epsilon)[0] == True:
             alpha_bounds.lower = alpha
         else:
             alpha_bounds.upper = alpha
-    return division_three_agents(prefs, alpha_bounds.lower, epsilon)
+    envy_free_division = division_three_agents(prefs, alpha_bounds.lower, epsilon)
+    assign(envy_free_division, prefs, epsilon)
 
 
 def hollender_rubinstein(prefs, cakeSize):
@@ -1017,7 +1016,7 @@ def hollender_rubinstein(prefs, cakeSize):
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
     #x = 0
-    while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon/10)**4)/12:
+    while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
         alpha = alpha_bounds.midpoint()
         if check_invariant_four_agents(prefs, alpha, epsilon) == True:
             alpha_bounds.lower = alpha
@@ -1026,8 +1025,9 @@ def hollender_rubinstein(prefs, cakeSize):
         #x = x  + 1
         #if x < 50:
         #    print(alpha)
-    return check_invariant_four_agents(prefs, alpha_bounds.lower, epsilon,
-                                       return_division = True)
+    envy_free_division = check_invariant_four_agents(prefs, alpha_bounds.lower, epsilon,
+                                                     return_division = True)
+    return assign(envy_free_division, prefs, epsilon)
 
 class Bounds:
     def __init__(self, lower, upper):
