@@ -615,8 +615,10 @@ def condition_a_check(slice, prefs, alpha, division, epsilon):
         for j in range(1, agents_number):
             if j == i:
                 continue
-            if ((agent_slice_values[i][slice-1] == np.max(agent_slice_values[i])) and \
-                (agent_slice_values[j][slice-1] == np.max(agent_slice_values[j])) and \
+            if (np.isclose(agent_slice_values[i][slice-1], 
+                           np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 120) and \
+                np.isclose(agent_slice_values[j][slice-1], 
+                           np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 120) and \
                 (agent_slice_values[0][slice-1] <= alpha)):
                 return True
     return False
@@ -706,8 +708,11 @@ def condition_b_check(slices, prefs, alpha, division, epsilon):
             for j in range(1, agents_number):
                 if j == i:
                     continue
-                if ((agent_slice_values[i][slices[s]-1] == np.max(agent_slice_values[i])) and \
-                    (agent_slice_values[j][slices[s]-1] == np.max(agent_slice_values[j]))):
+                if (np.isclose(agent_slice_values[i][slices[s]-1], 
+                               np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 120) and \
+                    (np.isclose(agent_slice_values[j][slices[s]-1], 
+                                np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 120) and \
+                    (agent_slice_values[0][slices[s]-1] <= alpha))):
                     slice_check[s] = True
     if (slice_check[0] == True and slice_check[1] == True):
         return True
