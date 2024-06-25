@@ -633,7 +633,7 @@ def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = Fal
         return False
     check_value = condition_a_check(1, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        return division, 1
     else:
         return check_value
     
@@ -647,7 +647,7 @@ def condition_a_slice_two_preferred(prefs, alpha, epsilon, return_division = Fal
         return False
     check_value = condition_a_check(2, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        return division, 2
     else:
         return check_value
     
@@ -661,7 +661,7 @@ def condition_a_slice_three_preferred(prefs, alpha, epsilon, return_division = F
         return False
     check_value = condition_a_check(3, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        return division, 3
     else:
         return check_value
     
@@ -675,7 +675,7 @@ def condition_a_slice_four_preferred(prefs, alpha, epsilon, return_division = Fa
         return False
     check_value = condition_a_check(4, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        return division, 4
     else:
         return check_value
     
@@ -697,6 +697,7 @@ def check_condition_a(prefs, alpha, epsilon, return_division = False):
 #condition B checks below.
 
 def condition_b_check(slices, prefs, alpha, division, epsilon):
+    #remove doubles
     agents_number = 4
     slices_number = 4
     agent_slice_values = np.zeros((agents_number,slices_number))
@@ -730,7 +731,7 @@ def condition_b_slice_one_two_preferred(prefs, alpha, epsilon, return_division =
             continue
         check_value = condition_b_check([1,2], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            return division, [1,2]
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -748,7 +749,7 @@ def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division
             continue
         check_value = condition_b_check([2,3], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            return division, [2,3]
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -766,7 +767,7 @@ def condition_b_slice_three_four_preferred(prefs, alpha, epsilon, return_divisio
             continue
         check_value = condition_b_check([3,4], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            return division, [3,4]
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -854,7 +855,7 @@ def condition_b_slice_one_three_preferred(prefs, alpha, epsilon, return_division
             continue
         check_value = condition_b_check([1,3], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            return division, [1,3]
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -870,9 +871,9 @@ def condition_b_slice_two_four_preferred(prefs, alpha, epsilon, return_division 
         division = FourAgentPortion(left_cut, middle_cut, right_cut)
         if check_valid_division(division) == False:
             continue
-        check_value = condition_b_check([3,4], prefs, alpha, division, epsilon)
+        check_value = condition_b_check([2,4], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            return division, [2,4]
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -952,7 +953,7 @@ def condition_b_slice_one_four_preferred(prefs, alpha, epsilon, return_division 
             continue
         check_value = condition_b_check([1,4], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            return division, [1,4]
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -981,8 +982,10 @@ def check_condition_b(prefs, alpha, epsilon, return_division = False):
 
 def check_invariant_four_agents(prefs, alpha, epsilon, return_division = False):
     if check_condition_a(prefs, alpha, epsilon) == True:
+        #print("a")
         return check_condition_a(prefs, alpha, epsilon, return_division)
     elif check_condition_b(prefs, alpha, epsilon) == True:
+        #print("b")
         return check_condition_b(prefs, alpha, epsilon, return_division)
     else:
         return False
@@ -1013,16 +1016,16 @@ def hollender_rubinstein(prefs, cakeSize):
         return equipartition
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
-    x = 0
+    #x = 0
     while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon/10)**4)/12:
         alpha = alpha_bounds.midpoint()
         if check_invariant_four_agents(prefs, alpha, epsilon) == True:
             alpha_bounds.lower = alpha
         else:
             alpha_bounds.upper = alpha
-        x = x  + 1
-        if x < 50:
-            print(alpha)
+        #x = x  + 1
+        #if x < 50:
+        #    print(alpha)
     return check_invariant_four_agents(prefs, alpha_bounds.lower, epsilon,
                                        return_division = True)
 
