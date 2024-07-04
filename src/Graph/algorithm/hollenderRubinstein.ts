@@ -14,7 +14,15 @@ export const hollenderRubinstein = async (preferences: Preferences, cakeSize: nu
 Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
   try {
     const response = await axios.post('/api/four_agent', { preferences, cakeSize });
-    return response.data.result;
+    const steps: Step[] = []
+    const division = response.data.division
+    const assignment = response.data.assignment
+    const slice1 = cutSlice(preferences, 0, division.left, 1)
+    const slice2 = cutSlice(preferences, division.left, division.middle, 2)
+    const slice3 = cutSlice(preferences, division.middle, division.right, 3)
+    const slice4 = cutSlice(preferences, division.right, cakeSize, 4)
+    return { solution: [slice1.assign(assignment[1]), slice2.assign(assignment[2]),
+                        slice3.assign(assignment[3]), slice4.assign(assignment[4])], steps};
   } catch (error) {
     console.error('Error calling API:', error);
     throw error; // Handle error as needed
