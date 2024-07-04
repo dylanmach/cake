@@ -19,7 +19,7 @@ def three_agent():
     # result = branzei_nisan(preferences, cake_size)
     # result_as_dict = [result.left, result.right]
     # return jsonify({'result': result_as_dict})
-    division, assignment = branzei_nisan(preferences, cake_size)
+    return branzei_nisan(preferences, cake_size)
 
 @app.route('/api/four_agent', methods=['POST'])
 def four_agent():
@@ -34,8 +34,7 @@ def four_agent():
     # division, assignment = hollender_rubinstein(preferences, cake_size)
     # return jsonify({'division': division,
     #                 'assignment': assignment})
-    result = hollender_rubinstein(preferences, cake_size)
-    return result
+    return hollender_rubinstein(preferences, cake_size)
 
 #Preprocessing Below
 
@@ -1058,7 +1057,10 @@ def branzei_nisan(raw_prefs, cakeSize):
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 3, epsilon)
     if check_equipartition_envy_free_three_agents(prefs, alpha_lower_bound, 3,
                                                   epsilon) == True:
-        return equipartition
+        slice_assignments = assign_slices(equipartition, prefs, 3, epsilon)
+        raw_envy_free_division = raw_division(equipartition, cakeSize, 3)
+        return jsonify({'division': raw_envy_free_division,
+                        'assignment': slice_assignments})
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
     while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
@@ -1070,7 +1072,8 @@ def branzei_nisan(raw_prefs, cakeSize):
     envy_free_division = division_three_agents(prefs, alpha_bounds.lower, epsilon)
     slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cakeSize, 3)
-    return raw_envy_free_division, slice_assignments
+    return jsonify({'division': raw_envy_free_division,
+                    'assignment': slice_assignments})
 
 
 def hollender_rubinstein(raw_prefs, cakeSize):
