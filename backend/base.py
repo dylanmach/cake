@@ -220,14 +220,69 @@ def value_query(agent, prefs, start, end, epsilon):
 
 #Cut Query Stuff Below
     
+# def start_cut_query(agent, prefs, end, value, epsilon):
+#     start_cut_bounds = Bounds(0, end)
+#     #TODO
+#     while abs(start_cut_bounds.upper - start_cut_bounds.lower) > 1e-15:
+#         start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
+#                                                    value, epsilon)
+#     start_cut = start_cut_bounds.midpoint()
+#     return start_cut
+
 def start_cut_query(agent, prefs, end, value, epsilon):
     start_cut_bounds = Bounds(0, end)
-    #TODO
-    while abs(start_cut_bounds.upper - start_cut_bounds.lower) > 1e-15:
+    while (start_cut_bounds.upper // epsilon) != (start_cut_bounds.lower // epsilon):
         start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
                                                    value, epsilon)
-    start_cut = start_cut_bounds.midpoint()
+    start = start_cut_bounds.midpoint()
+    start_cut = find_start_cut(agent, prefs, start, end, value, epsilon)
     return start_cut
+
+def find_start_cut(agent, prefs, start, end, value, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon)
+    if (start_cut is not None) and (start_bounds.upper - start_cut >= end - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
+        return start_cut
+    start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon)
+    if (start_cut is not None) and (start_bounds.upper - start_cut <= end - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
+        return start_cut
+    else:
+        print("no Cut exists")
+        
+def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+                                               end_bounds, epsilon)
+    component_one = -((end - end_bounds.lower) / 
+                      epsilon) * queries[0]
+    component_two = ((end - end_bounds.lower) / epsilon) * queries[1]
+    component_three = (start_bounds.upper / epsilon) * queries[0]
+    component_four = - (start_bounds.lower / epsilon) * queries[2]
+    denominator = (queries[2] - queries[0]) / epsilon
+    start_cut = (value - component_one - component_two - 
+                 component_three - component_four) / denominator
+    if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
+        return start_cut
+    else:
+        return None
+    
+def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+                                               end_bounds, epsilon)
+    component_one = ((end - end_bounds.lower) / 
+                    epsilon) * queries[0]
+    component_two = ((end_bounds.upper - end) / epsilon) * queries[2]
+    component_three = -((queries[0] - queries[1]) / epsilon) * start_bounds.upper
+    denominator = (queries[0] - queries[1]) / epsilon
+    start_cut = (value - component_one - component_two - 
+                 component_three) / denominator
+    if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
+        return start_cut
+    else:
+        return None
 
 
 def start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
@@ -241,15 +296,67 @@ def start_cut_bounds_update(agent, prefs, end, start_cut_bounds,
     return start_cut_bounds
 
 
+# def end_cut_query(agent, prefs, start, value, epsilon):
+#     end_cut_bounds = Bounds(start, 1)
+#     #TODO
+#     while abs(end_cut_bounds.upper - end_cut_bounds.lower) > 1e-15:
+#         end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
+#                                                value, epsilon)
+#     end_cut = end_cut_bounds.midpoint()
+#     return end_cut
+
 def end_cut_query(agent, prefs, start, value, epsilon):
     end_cut_bounds = Bounds(start, 1)
-    #TODO
-    while abs(end_cut_bounds.upper - end_cut_bounds.lower) > 1e-15:
+    while (end_cut_bounds.upper // epsilon) != (end_cut_bounds.lower // epsilon):
         end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
                                                value, epsilon)
-        #cut_bounds_update(prefs, cut_bounds, agents_number, epsilon)
-    end_cut = end_cut_bounds.midpoint()
+    end = end_cut_bounds.midpoint()
+    end_cut = find_end_cut(agent, prefs, start, end, value, epsilon)
     return end_cut
+
+def find_end_cut(agent, prefs, start, end, value, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon)
+    if (end_cut is not None) and (start_bounds.upper - start >= end_cut - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
+        return end_cut
+    end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon)
+    if (end_cut is not None) and (start_bounds.upper - start <= end_cut - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
+        return end_cut
+    else:
+        print("no Cut exists")
+        
+def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+                                               end_bounds, epsilon)
+    component_one = ((start_bounds.upper - start) / epsilon) * queries[0]
+    component_two = ((start - start_bounds.lower) / epsilon) * queries[2]
+    component_three = -((queries[1] - queries[0]) / epsilon) * end_bounds.lower
+    denominator = (queries[1] - queries[0]) / epsilon
+    end_cut = (value - component_one - component_two - component_three) / denominator
+    if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
+        return end_cut
+    else:
+        return None
+    
+def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+                                               end_bounds, epsilon)
+    component_one = -((start_bounds.upper - start) / 
+                    epsilon) * queries[0]
+    component_two = ((start_bounds.upper - start) / epsilon) * queries[1]
+    component_three = -((end_bounds.lower) / epsilon) * queries[0]
+    component_four = ((end_bounds.upper) / epsilon) * queries[2]
+    denominator = (queries[0] - queries[2]) / epsilon
+    end_cut = (value - component_one - component_two - 
+               component_three - component_four) / denominator
+    if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
+        return end_cut
+    else:
+        return None
 
 
 def end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
@@ -261,7 +368,6 @@ def end_cut_bounds_update(agent, prefs, start, end_cut_bounds,
     if queried_value > value:
         end_cut_bounds.upper = end_cut
     return end_cut_bounds
-
 
 def cut_query(agent, prefs, initial_cut, value, epsilon, end_cut = True):
     #Must add functionality that returns if there is no cut.
