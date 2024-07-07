@@ -13,13 +13,49 @@ import axios from 'axios'
 export const branzeiNisan = async (preferences: Preferences, cakeSize: number): 
 Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
   try {
-    const response = await axios.post('/api/three_agent', { preferences, cakeSize });
-    const steps: Step[] = []
+    const response = await axios.post('/api/three_agent', { preferences, cakeSize })
+    const equipartition = response.data.equipartition
     const division = response.data.division
     const assignment = response.data.assignment
+    const steps: Step[] = []
+    
+    const tempSlices = [
+      cutSlice(preferences, 0, equipartition.left, 1),
+      cutSlice(preferences, equipartition.left, equipartition.right, 2),
+      cutSlice(preferences, equipartition.right, cakeSize, 3),
+    ]
+
+    steps.push(
+      makeStep(
+        0,
+        `divides the resource into thirds at ${makePercentage(
+          equipartition.left / cakeSize,
+          3
+        )} and ${makePercentage(equipartition.right / cakeSize, 3)}`,
+        tempSlices
+      )
+    )
+
     const slice1 = cutSlice(preferences, 0, division.left, 1)
     const slice2 = cutSlice(preferences, division.left, division.right, 2)
     const slice3 = cutSlice(preferences, division.right, cakeSize, 3)
+    const finalSlices = [slice1, slice2, slice3]
+
+    steps.push(
+      makeStep(
+        0,
+        `The algorithm terminates at the approximately envy-free division at slices ${makePercentage(
+          division.left / cakeSize,
+          3
+        )} and ${makePercentage(division.right / cakeSize, 3)}`,
+        finalSlices
+      )
+    )
+
+    steps.push(makeStep(assignment[1], `is assigned piece ${slice1.id}`, [slice1], true))
+    steps.push(makeStep(assignment[2], `is assigned piece ${slice2.id}`, [slice2], true))
+    steps.push(makeStep(assignment[3], `is assigned piece ${slice3.id}`, [slice3], true))
+
     return { solution: [slice1.assign(assignment[1]), slice2.assign(assignment[2]),
                         slice3.assign(assignment[3])], steps};
   } catch (error) {

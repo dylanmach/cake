@@ -1070,9 +1070,11 @@ def branzei_nisan(raw_prefs, cakeSize):
         else:
             alpha_bounds.upper = alpha
     envy_free_division = division_three_agents(prefs, alpha_bounds.lower, epsilon)
+    raw_equipartition = raw_division(equipartition, cakeSize, 3)
     slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cakeSize, 3)
-    return jsonify({'division': raw_envy_free_division,
+    return jsonify({'equipartition': raw_equipartition,
+                    'division': raw_envy_free_division,
                     'assignment': slice_assignments})
 
 
@@ -1095,9 +1097,11 @@ def hollender_rubinstein(raw_prefs, cakeSize):
             alpha_bounds.upper = alpha
     envy_free_division = check_invariant_four_agents(prefs, alpha_bounds.lower, epsilon,
                                                      return_division = True)
+    raw_equipartition = raw_division(equipartition, cakeSize, 4)
     slice_assignments = assign_slices(envy_free_division, prefs, 4, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cakeSize, 4)
-    return jsonify({'division': raw_envy_free_division,
+    return jsonify({'equipartition': raw_equipartition,
+                    'division': raw_envy_free_division,
                     'assignment': slice_assignments})
     #return raw_envy_free_division, slice_assignments
 
