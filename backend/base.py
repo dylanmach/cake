@@ -249,7 +249,7 @@ def find_start_cut(agent, prefs, start, end, value, epsilon):
         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
         return start_cut
     else:
-        print("no Cut exists")
+        return None
         
 def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
@@ -325,7 +325,7 @@ def find_end_cut(agent, prefs, start, end, value, epsilon):
         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
         return end_cut
     else:
-        print("no Cut exists")
+        return None
         
 def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
@@ -448,7 +448,9 @@ def left_cut_bounds_right_segment_value_three_agent(prefs, left_cut,
                                                     left_segment_value,
                                                     epsilon):
     right_cut = cut_query(0, prefs, left_cut, left_segment_value, 
-                        epsilon, end_cut = True)
+                         epsilon, end_cut = True)
+    if right_cut is None:
+        return 0
     right_segment_value = value_query(0, prefs, right_cut, 1, epsilon)
     return right_segment_value
 
@@ -458,8 +460,12 @@ def left_cut_bounds_right_segment_value_four_agent(prefs, left_cut,
                                                    epsilon):
     middle_cut = cut_query(0, prefs, left_cut, left_segment_value, 
                                epsilon, end_cut = True)
+    if middle_cut is None:
+        return 0
     right_cut = cut_query(0, prefs, middle_cut, left_segment_value, 
                               epsilon, end_cut = True)
+    if right_cut is None:
+        return 0
     right_segment_value = value_query(0, prefs, right_cut, 1, epsilon)
     return right_segment_value
 
@@ -498,6 +504,8 @@ def right_cut_bounds_left_segment_value_three_agent(prefs, right_cut,
                                                     epsilon):
     left_cut = cut_query(0, prefs, right_cut, right_segment_value, 
                         epsilon, end_cut = False)
+    if left_cut is None:
+        return 0
     left_segment_value = value_query(0, prefs, 0, left_cut, epsilon)
     return left_segment_value
 
@@ -507,8 +515,12 @@ def right_cut_bounds_left_segment_value_four_agent(prefs, right_cut,
                                                    epsilon):
     middle_cut = cut_query(0, prefs, right_cut, right_segment_value, 
                         epsilon, end_cut = False)
+    if middle_cut is None:
+        return 0
     left_cut = cut_query(0, prefs, middle_cut, right_segment_value, 
                         epsilon, end_cut = False)
+    if left_cut is None:
+        return 0
     left_segment_value = value_query(0, prefs, 0, left_cut, epsilon)
     return left_segment_value
 
@@ -591,6 +603,13 @@ def slice_values(agent, prefs, division, agents_number, epsilon):
 #slice value stuff above
 
 #3 agent invariant checks below. need to add isclose
+
+def check_valid_division_three_agent(division):
+    if (division.right >= division.left):
+        return True
+    else:
+        return False
+    
 def invariant_three_agent_check(slice, prefs, division, epsilon):
     agent_one_slice_values = slice_values(1, prefs, division, 3, epsilon)
     agent_two_slice_values = slice_values(2, prefs, division, 3, epsilon)
@@ -604,24 +623,45 @@ def invariant_three_agent_check(slice, prefs, division, epsilon):
 
 def invariant_three_agents_slice_one_preferred(prefs, alpha, epsilon):
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     left_cut = cut_query(0, prefs, right_cut, alpha, 
                          epsilon, end_cut = False)
+    if left_cut is None:
+        return False
     division = ThreeAgentPortion(left_cut,right_cut)
-    return invariant_three_agent_check(1, prefs, division, epsilon)
+    if check_valid_division_three_agent(division) == False:
+        return False
+    else:
+        return invariant_three_agent_check(1, prefs, division, epsilon)
     
 
 def invariant_three_agents_slice_two_preferred(prefs, alpha, epsilon):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon)
+    if left_cut is None:
+        return False
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     division = ThreeAgentPortion(left_cut,right_cut)
-    return invariant_three_agent_check(2, prefs, division, epsilon)
+    if check_valid_division_three_agent(division) == False:
+        return False
+    else:
+        return invariant_three_agent_check(2, prefs, division, epsilon)
 
 
 def invariant_three_agents_slice_three_preferred(prefs, alpha, epsilon):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon)
+    if left_cut is None:
+        return False
     right_cut = cut_query(0, prefs, left_cut, alpha, epsilon)
+    if right_cut is None:
+        return False
     division = ThreeAgentPortion(left_cut,right_cut)
-    return invariant_three_agent_check(3, prefs, division, epsilon)
+    if check_valid_division_three_agent(division) == False:
+        return False
+    else:
+        return invariant_three_agent_check(3, prefs, division, epsilon)
 
 
 def check_invariant_three_agents(prefs, alpha, epsilon):
@@ -741,8 +781,14 @@ def condition_a_check(slice, prefs, alpha, division, epsilon):
 
 def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = False):
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     middle_cut = cut_query(0, prefs, right_cut, alpha, epsilon, end_cut = False)
+    if middle_cut is None:
+        return False
     left_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = False)
+    if left_cut is None:
+        return False
     division = FourAgentPortion(left_cut, middle_cut, right_cut)
     if check_valid_division(division) == False:
         return False
@@ -755,8 +801,14 @@ def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = Fal
 
 def condition_a_slice_two_preferred(prefs, alpha, epsilon, return_division = False):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
+    if left_cut is None:
+        return False
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     middle_cut = cut_query(0, prefs, right_cut, alpha, epsilon, end_cut = False)
+    if middle_cut is None:
+        return False
     division = FourAgentPortion(left_cut, middle_cut, right_cut)
     if check_valid_division(division) == False:
         return False
@@ -769,8 +821,14 @@ def condition_a_slice_two_preferred(prefs, alpha, epsilon, return_division = Fal
 
 def condition_a_slice_three_preferred(prefs, alpha, epsilon, return_division = False):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
+    if left_cut is None:
+        return False
     middle_cut = cut_query(0, prefs, left_cut, alpha, epsilon, end_cut = True)
+    if middle_cut is None:
+        return False
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     division = FourAgentPortion(left_cut, middle_cut, right_cut)
     if check_valid_division(division) == False:
         return False
@@ -783,8 +841,14 @@ def condition_a_slice_three_preferred(prefs, alpha, epsilon, return_division = F
 
 def condition_a_slice_four_preferred(prefs, alpha, epsilon, return_division = False):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
+    if left_cut is None:
+        return False
     middle_cut = cut_query(0, prefs, left_cut, alpha, epsilon, end_cut = True)
+    if middle_cut is None:
+        return False
     right_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = True)
+    if right_cut is None:
+        return False
     division = FourAgentPortion(left_cut, middle_cut, right_cut)
     if check_valid_division(division) == False:
         return False
@@ -838,7 +902,11 @@ def condition_b_check(slices, prefs, alpha, division, epsilon):
 
 def condition_b_slice_one_two_preferred(prefs, alpha, epsilon, return_division = False):
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     middle_cut = cut_query(0, prefs, right_cut, alpha, epsilon, end_cut = False)
+    if middle_cut is None:
+        return False
     for i in range(1,4):
         left_cut = bisection_cut_query(i, prefs, 0, middle_cut, epsilon)
         division = FourAgentPortion(left_cut, middle_cut, right_cut)
@@ -856,7 +924,11 @@ def condition_b_slice_one_two_preferred(prefs, alpha, epsilon, return_division =
 
 def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division = False):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
+    if left_cut is None:
+        return False
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     for i in range(1,4):
         middle_cut = bisection_cut_query(i, prefs, left_cut, right_cut, epsilon)
         division = FourAgentPortion(left_cut, middle_cut, right_cut)
@@ -874,7 +946,11 @@ def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division
 
 def condition_b_slice_three_four_preferred(prefs, alpha, epsilon, return_division = False):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
+    if left_cut is None:
+        return False
     middle_cut = cut_query(0, prefs, left_cut, alpha, epsilon, end_cut = True)
+    if middle_cut is None:
+        return False
     for i in range(1,4):
         right_cut = bisection_cut_query(i, prefs, middle_cut, 1, epsilon)
         division = FourAgentPortion(left_cut, middle_cut, right_cut)
@@ -909,8 +985,11 @@ def leftmost_cut_bounds_one_apart_update(agent, prefs, leftmost_cut_bounds,
                                      epsilon)
     rightmost_cut = cut_query(0, prefs, leftmost_cut, alpha, epsilon, 
                               end_cut = True)
-    right_segment_value = value_query(agent, prefs, rightmost_cut, right_bound,
-                                      epsilon)
+    if rightmost_cut is None:
+        right_segment_value = 0
+    else:
+        right_segment_value = value_query(agent, prefs, rightmost_cut, right_bound,
+                                        epsilon)
     leftmost_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
                                        leftmost_cut_bounds)
     return leftmost_cut_bounds
@@ -924,8 +1003,11 @@ def rightmost_cut_bounds_one_apart_update(agent, prefs, rightmost_cut_bounds,
                                       right_bound, epsilon)
     leftmost_cut = cut_query(0, prefs, rightmost_cut, alpha, epsilon, 
                              end_cut = False)
-    left_segment_value = value_query(agent, prefs, left_bound, 
-                                     leftmost_cut, epsilon)
+    if leftmost_cut is None:
+        left_segment_value = 0
+    else:
+        left_segment_value = value_query(agent, prefs, left_bound, 
+                                        leftmost_cut, epsilon)
     rightmost_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
                                         rightmost_cut_bounds)
     return rightmost_cut_bounds
@@ -963,6 +1045,8 @@ def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound,
 
 def condition_b_slice_one_three_preferred(prefs, alpha, epsilon, return_division = False):
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
+    if right_cut is None:
+        return False
     for i in range(1,4):
         left_cut, middle_cut = \
             one_apart_slice_cuts(i, prefs, alpha, 0, right_cut, epsilon)
@@ -981,6 +1065,8 @@ def condition_b_slice_one_three_preferred(prefs, alpha, epsilon, return_division
 
 def condition_b_slice_two_four_preferred(prefs, alpha, epsilon, return_division = False):
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
+    if left_cut is None:
+        return False
     for i in range(1,4):
         middle_cut, right_cut = \
             one_apart_slice_cuts(i, prefs, alpha, left_cut, 1, epsilon)
@@ -1011,11 +1097,17 @@ def left_cut_bounds_two_apart_update(agent, prefs,
                                      right_bound, epsilon):
     left_cut = left_cut_bounds.midpoint()
     middle_cut = cut_query(0, prefs, left_cut, alpha, epsilon, end_cut = True)
-    right_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = True)
+    if middle_cut is None:
+        right_segment_value = 0
+    else:
+        right_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = True)
+        if right_cut is None:
+            right_segment_value = 0
+        else:
+            right_segment_value = value_query(agent, prefs, right_cut, 1, epsilon)
     left_segment_value = value_query(agent, prefs, 0, left_cut, epsilon)
-    right_segment_value = value_query(agent, prefs, right_cut, 1, epsilon)
     left_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
-                                   left_cut_bounds)
+                                    left_cut_bounds)
     return left_cut_bounds 
 
 
@@ -1024,9 +1116,15 @@ def middle_cut_bounds_two_apart_update(agent, prefs,
                                        right_bound, epsilon):
     middle_cut = middle_cut_bounds.midpoint()
     left_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = False)
+    if left_cut is None:
+        left_segment_value = 0
+    else:
+        left_segment_value = value_query(agent, prefs, 0, left_cut, epsilon)
     right_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = True)
-    left_segment_value = value_query(agent, prefs, 0, left_cut, epsilon)
-    right_segment_value = value_query(agent, prefs, right_cut, 1, epsilon)
+    if right_cut is None:
+        right_segment_value = 0
+    else:
+        right_segment_value = value_query(agent, prefs, right_cut, 1, epsilon)
     middle_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
                                      middle_cut_bounds)
     return middle_cut_bounds
@@ -1037,8 +1135,14 @@ def right_cut_bounds_two_apart_update(agent, prefs,
                                       right_bound, epsilon):
     right_cut = right_cut_bounds.midpoint()
     middle_cut = cut_query(0, prefs, right_cut, alpha, epsilon, end_cut = False)
-    left_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = False)
-    left_segment_value = value_query(agent, prefs, 0, left_cut, epsilon)
+    if middle_cut is None:
+        left_segment_value = 0
+    else:
+        left_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = False)
+        if left_cut is None:
+            left_segment_value = 0
+        else:
+            left_segment_value = value_query(agent, prefs, 0, left_cut, epsilon)
     right_segment_value = value_query(agent, prefs, right_cut, 1, epsilon)
     right_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
                                     right_cut_bounds)
