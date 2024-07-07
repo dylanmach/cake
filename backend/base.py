@@ -222,17 +222,18 @@ def value_query(agent, prefs, start, end, epsilon):
     
 def start_cut_query(agent, prefs, end, value, epsilon):
     start_cut_bounds = Bounds(0, end)
+    #TODO
     while abs(start_cut_bounds.upper - start_cut_bounds.lower) > 1e-15:
-        start_cut_bounds = start_cut_bounds_update(prefs, end, start_cut_bounds, 
+        start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
                                                    value, epsilon)
     start_cut = start_cut_bounds.midpoint()
     return start_cut
 
 
-def start_cut_bounds_update(prefs, end, start_cut_bounds, 
+def start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
                             value, epsilon):
     start_cut = start_cut_bounds.midpoint()
-    queried_value = value_query(0, prefs, start_cut, end, epsilon)
+    queried_value = value_query(agent, prefs, start_cut, end, epsilon)
     if queried_value <= value:
         start_cut_bounds.upper  = start_cut
     if queried_value > value:
@@ -242,17 +243,19 @@ def start_cut_bounds_update(prefs, end, start_cut_bounds,
 
 def end_cut_query(agent, prefs, start, value, epsilon):
     end_cut_bounds = Bounds(start, 1)
+    #TODO
     while abs(end_cut_bounds.upper - end_cut_bounds.lower) > 1e-15:
-        end_cut_bounds = end_cut_bounds_update(prefs, start, end_cut_bounds, 
+        end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
                                                value, epsilon)
+        #cut_bounds_update(prefs, cut_bounds, agents_number, epsilon)
     end_cut = end_cut_bounds.midpoint()
     return end_cut
 
 
-def end_cut_bounds_update(prefs, start, end_cut_bounds, 
+def end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
                           value, epsilon):
     end_cut = end_cut_bounds.midpoint()
-    queried_value = value_query(0, prefs, start, end_cut, epsilon)
+    queried_value = value_query(agent, prefs, start, end_cut, epsilon)
     if queried_value <= value:
         end_cut_bounds.lower  = end_cut
     if queried_value > value:
@@ -271,6 +274,7 @@ def cut_query(agent, prefs, initial_cut, value, epsilon, end_cut = True):
 
 def bisection_cut_query(agent, prefs, start, end, epsilon):
     bisection_cut_bounds = Bounds(start, end)
+    #TODO
     while abs(bisection_cut_bounds.upper - bisection_cut_bounds.lower) > 1e-15:
         bisection_cut_bounds = \
             bisection_cut_bounds_update(agent, prefs, start, end,
@@ -304,6 +308,7 @@ def bounds_shift(left_slice_value, right_slice_value, cut_bounds):
 
 def equipartition_cut(prefs, cut_bounds, agent_numbers,
                       epsilon, cut_bounds_update):
+    #TODO
     while abs(cut_bounds.upper - cut_bounds.lower) > 1e-15:
         cut_bounds = cut_bounds_update(prefs, cut_bounds, agent_numbers, epsilon)
     return cut_bounds.midpoint()
@@ -829,6 +834,7 @@ def non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, left_bound,
                               cut_bounds, alpha, left_bound,
                               right_bound, epsilon)
     cut_epsilon_interval = find_epsilon_interval(cut_bounds, epsilon)
+    #TODO
     while abs(cut_bounds.upper - cut_bounds.lower) > 1e-15:
         cut_bounds = cut_bounds_update(indifferent_agent, prefs, 
                                        cut_bounds, alpha, left_bound,
