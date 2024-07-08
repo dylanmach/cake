@@ -182,10 +182,11 @@ def piecewise_linear_bounds(start, end, epsilon):
     return start_bounds, end_bounds
 
 
-def value_query_variant_one(agent, prefs, start, end, epsilon):
+def value_query_variant_one(agent, prefs, start, end, queries, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
-                                            end_bounds, epsilon)
+    if queries is None:
+        queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+                                                end_bounds, epsilon)
     component_one = (((start_bounds.upper - start) - (end - end_bounds.lower)) / 
                     epsilon) * queries[0]
     component_two = ((end - end_bounds.lower) / epsilon) * queries[1]
@@ -193,10 +194,11 @@ def value_query_variant_one(agent, prefs, start, end, epsilon):
     return component_one + component_two + component_three
 
 
-def value_query_variant_two(agent, prefs, start, end, epsilon):
+def value_query_variant_two(agent, prefs, start, end, queries, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
-                                               end_bounds, epsilon)
+    if queries is None:
+        queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+                                                end_bounds, epsilon)
     component_one = (((end - end_bounds.lower) - (start_bounds.upper - start)) / 
                     epsilon) * queries[0]
     component_two = ((start_bounds.upper - start) / epsilon) * queries[1]
@@ -204,7 +206,7 @@ def value_query_variant_two(agent, prefs, start, end, epsilon):
     return component_one + component_two + component_three
 
 
-def value_query(agent, prefs, start, end, epsilon):
+def value_query(agent, prefs, start, end, epsilon, queries = None):
     '''
     Linear interpolation on epsilon grid.
     '''
@@ -212,9 +214,9 @@ def value_query(agent, prefs, start, end, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     
     if start_bounds.upper - start >= end - end_bounds.lower:
-        return value_query_variant_one(agent, prefs, start, end, epsilon)
+        return value_query_variant_one(agent, prefs, start, end, queries[1], epsilon)
     if start_bounds.upper - start < end - end_bounds.lower:
-        return value_query_variant_two(agent, prefs, start, end, epsilon)
+        return value_query_variant_two(agent, prefs, start, end, queries[2], epsilon)
     
 #Value Query stuff above
 
@@ -593,20 +595,84 @@ def equipartition_cut(prefs, cut_bounds, agent_numbers,
     return cut_bounds.midpoint()
 
 
+# def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds, 
+#                              right_cut_bounds, agents_number, epsilon):
+#     left_cut = equipartition_cut(prefs, left_cut_bounds, agents_number, epsilon,
+#                                  left_cut_bounds_update)
+#     right_cut= equipartition_cut(prefs, right_cut_bounds, agents_number, epsilon,
+#                                  right_cut_bounds_update)
+#     if agents_number == 3:
+#         equipartition = ThreeAgentPortion(left_cut, right_cut)
+#     if agents_number == 4:
+#         middle_cut= equipartition_cut(prefs, middle_cut_bounds, agents_number, 
+#                                       epsilon, middle_cut_bounds_update)
+#         equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
+#     alpha = value_query(0, prefs, 0, left_cut, epsilon)
+#     return equipartition, alpha
+def equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
+                                      right_cut_bounds, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(0, 1, epsilon)
+    first_slice_queries_one = intermediate_queries_variant_one(0, prefs, start_bounds, 
+                                                               left_cut_bounds, epsilon)
+    first_slice_queries_two = intermediate_queries_variant_two(0, prefs, start_bounds, 
+                                                               left_cut_bounds, epsilon)
+    second_slice_queries_one = intermediate_queries_variant_one(0, prefs, left_cut_bounds, 
+                                                                middle_cut_bounds, epsilon)
+    second_slice_queries_two = intermediate_queries_variant_two(0, prefs, left_cut_bounds, 
+                                                                middle_cut_bounds, epsilon)
+    third_slice_queries_one = intermediate_queries_variant_one(0, prefs, middle_cut_bounds, 
+                                                                right_cut_bounds, epsilon)
+    third_slice_queries_two = intermediate_queries_variant_two(0, prefs, middle_cut_bounds, 
+                                                                right_cut_bounds, epsilon)
+    fourth_slice_queries_one = intermediate_queries_variant_one(0, prefs, right_cut_bounds, 
+                                                                end_bounds, epsilon)
+    fourth_slice_queries_two = intermediate_queries_variant_two(0, prefs, right_cut_bounds, 
+                                                                end_bounds, epsilon)
+    
+    queries = [
+        [
+            first_slice_queries_one, first_slice_queries_two
+        ],
+        [
+            second_slice_queries_one, second_slice_queries_two
+        ],
+        [
+            third_slice_queries_one, third_slice_queries_two
+        ],
+        [
+            fourth_slice_queries_one, fourth_slice_queries_two
+        ]
+    ]
+    return queries
+
+def value_query_with_queries(agent, prefs, start, end, queries, epsilon):
+    print("hi")
 def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds, 
                              right_cut_bounds, agents_number, epsilon):
-    left_cut = equipartition_cut(prefs, left_cut_bounds, agents_number, epsilon,
-                                 left_cut_bounds_update)
-    right_cut= equipartition_cut(prefs, right_cut_bounds, agents_number, epsilon,
-                                 right_cut_bounds_update)
-    if agents_number == 3:
-        equipartition = ThreeAgentPortion(left_cut, right_cut)
-    if agents_number == 4:
-        middle_cut= equipartition_cut(prefs, middle_cut_bounds, agents_number, 
-                                      epsilon, middle_cut_bounds_update)
-        equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
-    alpha = value_query(0, prefs, 0, left_cut, epsilon)
-    return equipartition, alpha
+    value_query()
+    left_cut = left_cut_bounds.midpoint()
+    queries = equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
+                                                right_cut_bounds, epsilon)
+    while abs(left_cut_bounds.upper - left_cut_bounds.lower) > 1e-15:
+        left_segment_value = value_query_with_queries(0, prefs, 0, left_cut, 
+                                                    queries[1], epsilon)
+        
+        middle_cut = cut_query_with_epsilon_bounds(0, prefs, left_cut, left_segment_value, 
+                                                   middle_cut_bounds, queries[2],
+                                                   epsilon, end_cut = True)
+        if middle_cut is None:
+            continue
+        right_cut = cut_query_with_epsilon_bounds(0, prefs, middle_cut, left_segment_value, 
+                                                  right_cut_bounds, queries[3],
+                                                  epsilon, end_cut = True)
+        if right_cut is None:
+            continue
+        right_segment_value = value_query_with_queries(0, prefs, right_cut, 1, 
+                                                       queries[4], epsilon)
+
+        left_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
+                                    left_cut_bounds)
+    return left_cut_bounds
 
 
 def find_epsilon_interval(bounds, epsilon):
