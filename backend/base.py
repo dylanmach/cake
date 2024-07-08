@@ -378,16 +378,27 @@ def cut_query(agent, prefs, initial_cut, value, epsilon, end_cut = True):
     return queried_cut
 
 
+# def bisection_cut_query(agent, prefs, start, end, epsilon):
+#     bisection_cut_bounds = Bounds(start, end)
+#     #TODO
+#     while abs(bisection_cut_bounds.upper - bisection_cut_bounds.lower) > 1e-15:
+#         bisection_cut_bounds = \
+#             bisection_cut_bounds_update(agent, prefs, start, end,
+#                                         bisection_cut_bounds, epsilon)
+#     bisection_cut = bisection_cut_bounds.midpoint()
+#     return bisection_cut
+
 def bisection_cut_query(agent, prefs, start, end, epsilon):
+    if start == end:
+        return start
     bisection_cut_bounds = Bounds(start, end)
     #TODO
-    while abs(bisection_cut_bounds.upper - bisection_cut_bounds.lower) > 1e-15:
+    while (bisection_cut_bounds.upper // epsilon) != (bisection_cut_bounds.lower // epsilon):
         bisection_cut_bounds = \
             bisection_cut_bounds_update(agent, prefs, start, end,
                                         bisection_cut_bounds, epsilon)
-    bisection_cut = bisection_cut_bounds.midpoint()
+    bisection_cut = find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon)
     return bisection_cut
-
 
 def bisection_cut_bounds_update(agent, prefs, start, end, 
                                 bisection_cut_bounds, epsilon):
@@ -397,6 +408,168 @@ def bisection_cut_bounds_update(agent, prefs, start, end,
     bisection_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
                                         bisection_cut_bounds) 
     return bisection_cut_bounds
+
+def find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    bisection_bounds = find_epsilon_interval(bisection_cut_bounds, epsilon)
+    bisection_cut = find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, end, epsilon)
+    if (bisection_cut is not None) and (start_bounds.upper - start >= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut >= end - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        return bisection_cut
+    bisection_cut = find_bisection_cut_variant_one_two(agent, prefs, start, bisection_bounds, end, epsilon)
+    if (bisection_cut is not None) and (start_bounds.upper - start >= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut <= end - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        return bisection_cut
+    bisection_cut = find_bisection_cut_variant_two_one(agent, prefs, start, bisection_bounds, end, epsilon)
+    if (bisection_cut is not None) and (start_bounds.upper - start <= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut >= end - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        return bisection_cut
+    bisection_cut = find_bisection_cut_variant_two_two(agent, prefs, start, bisection_bounds, end, epsilon)
+    if (bisection_cut is not None) and (start_bounds.upper - start <= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut <= end - end_bounds.lower):
+        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        return bisection_cut
+    else:
+        return None
+    
+def find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, end, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries_left = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+                                                    bisection_bounds, epsilon)
+    queries_right = intermediate_queries_variant_one(agent, prefs, bisection_bounds, 
+                                                     end_bounds, epsilon)
+    
+    component_one_left = ((start_bounds.upper - start) / 
+                          epsilon) * queries_left[0]
+    component_two_left = ((start - start_bounds.lower) / epsilon) * queries_left[2]
+    component_three_left = ((queries_left[0] - queries_left[1]) / epsilon) * bisection_bounds.lower 
+
+    component_one_right = -((end - end_bounds.lower) / 
+                            epsilon) * queries_right[0]
+    component_two_right = ((end - end_bounds.lower) / epsilon) * queries_right[1]
+    component_three_right = (bisection_bounds.upper / epsilon) * queries_right[0]
+    component_four_right = -(bisection_bounds.lower / epsilon) * queries_right[2]
+
+    left_hand_side = (component_one_left + component_two_left + component_three_left)
+    right_hand_side = (component_one_right + component_two_right + 
+                       component_three_right + component_four_right)
+    numerator = left_hand_side - right_hand_side
+
+    left_multiple = (queries_left[1] - queries_left[0]) / epsilon
+    right_multiple = (queries_right[2] - queries_right[0]) / epsilon
+    denominator = right_multiple - left_multiple
+
+    bisection_cut = numerator / denominator
+    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+        return bisection_cut
+    else:
+        return None
+    
+def find_bisection_cut_variant_one_two(agent, prefs, start, bisection_bounds, end, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries_left = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+                                                    bisection_bounds, epsilon)
+    queries_right = intermediate_queries_variant_two(agent, prefs, bisection_bounds, 
+                                                     end_bounds, epsilon)
+    
+    component_one_left = ((start_bounds.upper - start) / 
+                          epsilon) * queries_left[0]
+    component_two_left = ((start - start_bounds.lower) / epsilon) * queries_left[2]
+    component_three_left = ((queries_left[0] - queries_left[1]) / epsilon) * bisection_bounds.lower 
+
+    component_one_right = ((end - end_bounds.lower) / 
+                           epsilon) * queries_right[0]
+    component_two_right = ((end_bounds.upper - end) / epsilon) * queries_right[2]
+    component_three_right = ((queries_right[1] - queries_right[0]) / epsilon) * bisection_bounds.upper
+
+    left_hand_side = (component_one_left + component_two_left + component_three_left)
+    right_hand_side = (component_one_right + component_two_right + component_three_right)
+    numerator = left_hand_side - right_hand_side
+
+    left_multiple = (queries_left[1] - queries_left[0]) / epsilon
+    right_multiple = (queries_right[0] - queries_right[1]) / epsilon
+    denominator = right_multiple - left_multiple
+
+    bisection_cut = numerator / denominator
+    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+        return bisection_cut
+    else:
+        return None
+
+def find_bisection_cut_variant_two_one(agent, prefs, start, bisection_bounds, end, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries_left = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+                                                    bisection_bounds, epsilon)
+    queries_right = intermediate_queries_variant_one(agent, prefs, bisection_bounds, 
+                                                     end_bounds, epsilon)
+    
+    component_one_left = -((start_bounds.upper - start) / 
+                           epsilon) * queries_left[0]
+    component_two_left = ((start_bounds.upper - start) / epsilon) * queries_left[1]
+    component_three_left = -(bisection_bounds.lower / epsilon) * queries_left[0]
+    component_four_left = (bisection_bounds.upper / epsilon) * queries_left[2] 
+
+    component_one_right = -((end - end_bounds.lower) / 
+                            epsilon) * queries_right[0]
+    component_two_right = ((end - end_bounds.lower) / epsilon) * queries_right[1]
+    component_three_right = (bisection_bounds.upper / epsilon) * queries_right[0]
+    component_four_right = -(bisection_bounds.lower / epsilon) * queries_right[2]
+
+    left_hand_side = (component_one_left + component_two_left + 
+                      component_three_left + component_four_left)
+    right_hand_side = (component_one_right + component_two_right + 
+                       component_three_right + component_four_right)
+    numerator = left_hand_side - right_hand_side
+
+    left_multiple = (queries_left[0] - queries_left[2]) / epsilon
+    right_multiple = (queries_right[2] - queries_right[0]) / epsilon
+    denominator = right_multiple - left_multiple
+
+    bisection_cut = numerator / denominator
+    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+        return bisection_cut
+    else:
+        return None
+    
+def find_bisection_cut_variant_two_two(agent, prefs, start, bisection_bounds, end, epsilon):
+    start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+    queries_left = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+                                                    bisection_bounds, epsilon)
+    queries_right = intermediate_queries_variant_two(agent, prefs, bisection_bounds, 
+                                                     end_bounds, epsilon)
+    
+    component_one_left = -((start_bounds.upper - start) / 
+                           epsilon) * queries_left[0]
+    component_two_left = ((start_bounds.upper - start) / epsilon) * queries_left[1]
+    component_three_left = -(bisection_bounds.lower / epsilon) * queries_left[0]
+    component_four_left = (bisection_bounds.upper / epsilon) * queries_left[2] 
+
+    component_one_right = ((end - end_bounds.lower) / 
+                           epsilon) * queries_right[0]
+    component_two_right = ((end_bounds.upper - end) / epsilon) * queries_right[2]
+    component_three_right = ((queries_right[1] - queries_right[0]) / epsilon) * bisection_bounds.upper
+
+    left_hand_side = (component_one_left + component_two_left + 
+                      component_three_left + component_four_left)
+    right_hand_side = (component_one_right + component_two_right + component_three_right)
+    numerator = left_hand_side - right_hand_side
+
+    left_multiple = (queries_left[0] - queries_left[2]) / epsilon
+    right_multiple = (queries_right[0] - queries_right[1]) / epsilon
+    denominator = right_multiple - left_multiple
+
+    bisection_cut = numerator / denominator
+    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+        return bisection_cut
+    else:
+        return None
 
 #Cut Query Stuff above
 
@@ -931,6 +1104,8 @@ def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division
         return False
     for i in range(1,4):
         middle_cut = bisection_cut_query(i, prefs, left_cut, right_cut, epsilon)
+        if middle_cut is None:
+            return False
         division = FourAgentPortion(left_cut, middle_cut, right_cut)
         if check_valid_division(division) == False:
             continue
