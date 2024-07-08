@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 import pandas as pd
+from timeit import default_timer as timer
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for cross-origin requests
@@ -186,7 +187,7 @@ def value_query_variant_one(agent, prefs, start, end, queries, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
-                                                end_bounds, epsilon)
+                                                   end_bounds, epsilon)
     component_one = (((start_bounds.upper - start) - (end - end_bounds.lower)) / 
                     epsilon) * queries[0]
     component_two = ((end - end_bounds.lower) / epsilon) * queries[1]
@@ -198,7 +199,7 @@ def value_query_variant_two(agent, prefs, start, end, queries, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
-                                                end_bounds, epsilon)
+                                                   end_bounds, epsilon)
     component_one = (((end - end_bounds.lower) - (start_bounds.upper - start)) / 
                     epsilon) * queries[0]
     component_two = ((start_bounds.upper - start) / epsilon) * queries[1]
@@ -206,7 +207,7 @@ def value_query_variant_two(agent, prefs, start, end, queries, epsilon):
     return component_one + component_two + component_three
 
 
-def value_query(agent, prefs, start, end, epsilon, queries = None):
+def value_query(agent, prefs, start, end, epsilon, queries = [None, None]):
     '''
     Linear interpolation on epsilon grid.
     '''
@@ -214,9 +215,9 @@ def value_query(agent, prefs, start, end, epsilon, queries = None):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     
     if start_bounds.upper - start >= end - end_bounds.lower:
-        return value_query_variant_one(agent, prefs, start, end, queries[1], epsilon)
+        return value_query_variant_one(agent, prefs, start, end, queries[0], epsilon)
     if start_bounds.upper - start < end - end_bounds.lower:
-        return value_query_variant_two(agent, prefs, start, end, queries[2], epsilon)
+        return value_query_variant_two(agent, prefs, start, end, queries[1], epsilon)
     
 #Value Query stuff above
 
@@ -231,32 +232,97 @@ def value_query(agent, prefs, start, end, epsilon, queries = None):
 #     start_cut = start_cut_bounds.midpoint()
 #     return start_cut
 
-def start_cut_query(agent, prefs, end, value, epsilon):
-    start_cut_bounds = Bounds(0, end)
-    while (start_cut_bounds.upper // epsilon) != (start_cut_bounds.lower // epsilon):
-        start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
-                                                   value, epsilon)
+# def start_cut_query(agent, prefs, end, value, epsilon):
+#     start_cut_bounds = Bounds(0, end)
+#     while (start_cut_bounds.upper // epsilon) != (start_cut_bounds.lower // epsilon):
+#         start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
+#                                                    value, epsilon)
+#     start = start_cut_bounds.midpoint()
+#     start_cut = find_start_cut(agent, prefs, start, end, value, epsilon)
+#     return start_cut
+
+# def find_start_cut(agent, prefs, start, end, value, epsilon):
+#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+#     start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon)
+#     if (start_cut is not None) and (start_bounds.upper - start_cut >= end - end_bounds.lower):
+#         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
+#         return start_cut
+#     start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon)
+#     if (start_cut is not None) and (start_bounds.upper - start_cut <= end - end_bounds.lower):
+#         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
+#         return start_cut
+#     else:
+#         return None
+        
+# def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon):
+#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+#     queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+#                                                end_bounds, epsilon)
+#     component_one = -((end - end_bounds.lower) / 
+#                       epsilon) * queries[0]
+#     component_two = ((end - end_bounds.lower) / epsilon) * queries[1]
+#     component_three = (start_bounds.upper / epsilon) * queries[0]
+#     component_four = - (start_bounds.lower / epsilon) * queries[2]
+#     denominator = (queries[2] - queries[0]) / epsilon
+#     start_cut = (value - component_one - component_two - 
+#                  component_three - component_four) / denominator
+#     if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
+#         return start_cut
+#     else:
+#         return None
+    
+# def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon):
+#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+#     queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+#                                                end_bounds, epsilon)
+#     component_one = ((end - end_bounds.lower) / 
+#                     epsilon) * queries[0]
+#     component_two = ((end_bounds.upper - end) / epsilon) * queries[2]
+#     component_three = -((queries[0] - queries[1]) / epsilon) * start_bounds.upper
+#     denominator = (queries[0] - queries[1]) / epsilon
+#     start_cut = (value - component_one - component_two - 
+#                  component_three) / denominator
+#     if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
+#         return start_cut
+#     else:
+#         return None
+
+def start_cut_query(agent, prefs, end, value, epsilon, bounds, queries):
+    if bounds is None:
+        start_cut_bounds = Bounds(0, end)
+        while (start_cut_bounds.upper // epsilon) != (start_cut_bounds.lower // epsilon):
+            start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
+                                                    value, epsilon)
+    else:
+        start_cut_bounds = bounds
     start = start_cut_bounds.midpoint()
-    start_cut = find_start_cut(agent, prefs, start, end, value, epsilon)
+    start_cut = find_start_cut(agent, prefs, start, end, value, epsilon, queries)
     return start_cut
 
-def find_start_cut(agent, prefs, start, end, value, epsilon):
+def find_start_cut(agent, prefs, start, end, value, epsilon, queries):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon)
+    if queries is not None:
+        start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon, queries[0])
+    else:
+        start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon)
     if (start_cut is not None) and (start_bounds.upper - start_cut >= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
         return start_cut
-    start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon)
+    if queries is not None:
+        start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon, queries[1])
+    else:
+        start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon)
     if (start_cut is not None) and (start_bounds.upper - start_cut <= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
         return start_cut
     else:
         return None
         
-def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon):
+def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon, queries = None):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
-                                               end_bounds, epsilon)
+    if queries is None:
+        queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+                                                   end_bounds, epsilon)
     component_one = -((end - end_bounds.lower) / 
                       epsilon) * queries[0]
     component_two = ((end - end_bounds.lower) / epsilon) * queries[1]
@@ -270,10 +336,11 @@ def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon):
     else:
         return None
     
-def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon):
+def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon, queries = None):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
-                                               end_bounds, epsilon)
+    if queries is None:
+        queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+                                                   end_bounds, epsilon)
     component_one = ((end - end_bounds.lower) / 
                     epsilon) * queries[0]
     component_two = ((end_bounds.upper - end) / epsilon) * queries[2]
@@ -307,32 +374,95 @@ def start_cut_bounds_update(agent, prefs, end, start_cut_bounds,
 #     end_cut = end_cut_bounds.midpoint()
 #     return end_cut
 
-def end_cut_query(agent, prefs, start, value, epsilon):
-    end_cut_bounds = Bounds(start, 1)
-    while (end_cut_bounds.upper // epsilon) != (end_cut_bounds.lower // epsilon):
-        end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
-                                               value, epsilon)
+# def end_cut_query(agent, prefs, start, value, epsilon):
+#     end_cut_bounds = Bounds(start, 1)
+#     while (end_cut_bounds.upper // epsilon) != (end_cut_bounds.lower // epsilon):
+#         end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
+#                                                value, epsilon)
+#     end = end_cut_bounds.midpoint()
+#     end_cut = find_end_cut(agent, prefs, start, end, value, epsilon)
+#     return end_cut
+
+# def find_end_cut(agent, prefs, start, end, value, epsilon):
+#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+#     end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon)
+#     if (end_cut is not None) and (start_bounds.upper - start >= end_cut - end_bounds.lower):
+#         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
+#         return end_cut
+#     end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon)
+#     if (end_cut is not None) and (start_bounds.upper - start <= end_cut - end_bounds.lower):
+#         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
+#         return end_cut
+#     else:
+#         return None
+        
+# def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon):
+#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+#     queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+#                                                end_bounds, epsilon)
+#     component_one = ((start_bounds.upper - start) / epsilon) * queries[0]
+#     component_two = ((start - start_bounds.lower) / epsilon) * queries[2]
+#     component_three = -((queries[1] - queries[0]) / epsilon) * end_bounds.lower
+#     denominator = (queries[1] - queries[0]) / epsilon
+#     end_cut = (value - component_one - component_two - component_three) / denominator
+#     if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
+#         return end_cut
+#     else:
+#         return None
+    
+# def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon):
+#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
+#     queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+#                                                end_bounds, epsilon)
+#     component_one = -((start_bounds.upper - start) / 
+#                     epsilon) * queries[0]
+#     component_two = ((start_bounds.upper - start) / epsilon) * queries[1]
+#     component_three = -((end_bounds.lower) / epsilon) * queries[0]
+#     component_four = ((end_bounds.upper) / epsilon) * queries[2]
+#     denominator = (queries[0] - queries[2]) / epsilon
+#     end_cut = (value - component_one - component_two - 
+#                component_three - component_four) / denominator
+#     if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
+#         return end_cut
+#     else:
+#         return None
+
+def end_cut_query(agent, prefs, start, value, epsilon, bounds, queries):
+    if bounds is None:
+        end_cut_bounds = Bounds(start, 1)
+        while (end_cut_bounds.upper // epsilon) != (end_cut_bounds.lower // epsilon):
+            end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
+                                                value, epsilon)
+    else:
+        end_cut_bounds = bounds
     end = end_cut_bounds.midpoint()
-    end_cut = find_end_cut(agent, prefs, start, end, value, epsilon)
+    end_cut = find_end_cut(agent, prefs, start, end, value, epsilon, queries)
     return end_cut
 
-def find_end_cut(agent, prefs, start, end, value, epsilon):
+def find_end_cut(agent, prefs, start, end, value, epsilon, queries):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon)
+    if queries is not None:
+        end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon, queries[0])
+    else:
+        end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon)
     if (end_cut is not None) and (start_bounds.upper - start >= end_cut - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
         return end_cut
-    end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon)
+    if queries is not None:
+        end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon, queries[1])
+    else:
+        end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon)
     if (end_cut is not None) and (start_bounds.upper - start <= end_cut - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
         return end_cut
     else:
         return None
         
-def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon):
+def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon, queries = None):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
-                                               end_bounds, epsilon)
+    if queries is None:
+        queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
+                                                end_bounds, epsilon)
     component_one = ((start_bounds.upper - start) / epsilon) * queries[0]
     component_two = ((start - start_bounds.lower) / epsilon) * queries[2]
     component_three = -((queries[1] - queries[0]) / epsilon) * end_bounds.lower
@@ -343,10 +473,11 @@ def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon):
     else:
         return None
     
-def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon):
+def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon, queries = None):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-    queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
-                                               end_bounds, epsilon)
+    if queries is None:
+        queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
+                                                end_bounds, epsilon)
     component_one = -((start_bounds.upper - start) / 
                     epsilon) * queries[0]
     component_two = ((start_bounds.upper - start) / epsilon) * queries[1]
@@ -371,12 +502,13 @@ def end_cut_bounds_update(agent, prefs, start, end_cut_bounds,
         end_cut_bounds.upper = end_cut
     return end_cut_bounds
 
-def cut_query(agent, prefs, initial_cut, value, epsilon, end_cut = True):
+def cut_query(agent, prefs, initial_cut, value, epsilon, end_cut = True, 
+              bounds = None, queries = None):
     #Must add functionality that returns if there is no cut.
     if end_cut == True:
-        queried_cut = end_cut_query(agent, prefs, initial_cut, value, epsilon)
+        queried_cut = end_cut_query(agent, prefs, initial_cut, value, epsilon, bounds, queries)
     else:
-        queried_cut = start_cut_query(agent, prefs, initial_cut, value, epsilon)
+        queried_cut = start_cut_query(agent, prefs, initial_cut, value, epsilon, bounds, queries)
     return queried_cut
 
 
@@ -595,20 +727,25 @@ def equipartition_cut(prefs, cut_bounds, agent_numbers,
     return cut_bounds.midpoint()
 
 
-# def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds, 
-#                              right_cut_bounds, agents_number, epsilon):
-#     left_cut = equipartition_cut(prefs, left_cut_bounds, agents_number, epsilon,
-#                                  left_cut_bounds_update)
-#     right_cut= equipartition_cut(prefs, right_cut_bounds, agents_number, epsilon,
-#                                  right_cut_bounds_update)
-#     if agents_number == 3:
-#         equipartition = ThreeAgentPortion(left_cut, right_cut)
-#     if agents_number == 4:
-#         middle_cut= equipartition_cut(prefs, middle_cut_bounds, agents_number, 
-#                                       epsilon, middle_cut_bounds_update)
-#         equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
-#     alpha = value_query(0, prefs, 0, left_cut, epsilon)
-#     return equipartition, alpha
+def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds, 
+                             right_cut_bounds, agents_number, epsilon):
+    start = timer()
+    left_cut = equipartition_cut(prefs, left_cut_bounds, agents_number, epsilon,
+                                 left_cut_bounds_update)
+    right_cut= equipartition_cut(prefs, right_cut_bounds, agents_number, epsilon,
+                                 right_cut_bounds_update)
+    if agents_number == 3:
+        equipartition = ThreeAgentPortion(left_cut, right_cut)
+    if agents_number == 4:
+        middle_cut= equipartition_cut(prefs, middle_cut_bounds, agents_number, 
+                                      epsilon, middle_cut_bounds_update)
+        equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
+    alpha = value_query(0, prefs, 0, left_cut, epsilon)
+    end = timer()
+    print(end - start)
+    return equipartition, alpha
+
+
 def equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
                                       right_cut_bounds, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(0, 1, epsilon)
@@ -645,34 +782,51 @@ def equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds,
     ]
     return queries
 
-def value_query_with_queries(agent, prefs, start, end, queries, epsilon):
-    print("hi")
-def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds, 
-                             right_cut_bounds, agents_number, epsilon):
-    value_query()
+
+def exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
+                                         right_cut_bounds, epsilon):
+    start = timer()
     left_cut = left_cut_bounds.midpoint()
     queries = equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
                                                 right_cut_bounds, epsilon)
     while abs(left_cut_bounds.upper - left_cut_bounds.lower) > 1e-15:
-        left_segment_value = value_query_with_queries(0, prefs, 0, left_cut, 
-                                                    queries[1], epsilon)
+        left_segment_value = value_query(0, prefs, 0, left_cut, 
+                                         epsilon, queries[0])
         
-        middle_cut = cut_query_with_epsilon_bounds(0, prefs, left_cut, left_segment_value, 
-                                                   middle_cut_bounds, queries[2],
-                                                   epsilon, end_cut = True)
+        middle_cut = cut_query(0, prefs, left_cut, left_segment_value, 
+                               epsilon, True,
+                               middle_cut_bounds, queries[1])
         if middle_cut is None:
-            continue
-        right_cut = cut_query_with_epsilon_bounds(0, prefs, middle_cut, left_segment_value, 
-                                                  right_cut_bounds, queries[3],
-                                                  epsilon, end_cut = True)
+            #By intermediate value theorem, the cut bounds must be all
+            #containcuts that return slices less than or all contain cuts that
+            #return slices greater than the desired value.
+            middle_cut = middle_cut_bounds.midpoint()
+            right_segment_value = value_query(0, prefs, left_cut, middle_cut, 
+                                              epsilon, queries[1])
+            left_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
+                                           left_cut_bounds)
+                
+        right_cut = cut_query(0, prefs, middle_cut, left_segment_value, 
+                              epsilon, True,
+                              right_cut_bounds, queries[2])
         if right_cut is None:
-            continue
-        right_segment_value = value_query_with_queries(0, prefs, right_cut, 1, 
-                                                       queries[4], epsilon)
+            right_cut = right_cut_bounds.midpoint()
+            right_segment_value = value_query(0, prefs, middle_cut, right_cut, 
+                                              epsilon, queries[2])
+            left_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
+                                           left_cut_bounds)
+        right_segment_value = value_query(0, prefs, right_cut, 1, 
+                                          epsilon, queries[3])
 
         left_cut_bounds = bounds_shift(left_segment_value, right_segment_value, 
-                                    left_cut_bounds)
-    return left_cut_bounds
+                                       left_cut_bounds)
+    left_cut = left_cut_bounds.midpoint()
+    equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
+    alpha = value_query(0, prefs, 0, left_cut, epsilon, queries[0])
+    end = timer()
+    print(end - start)
+    return equipartition, alpha
+    
 
 
 def find_epsilon_interval(bounds, epsilon):
@@ -802,10 +956,10 @@ def compute_equipartition(prefs, agents_number, epsilon):
                                       middle_cut_bounds_update)
     right_cut_bounds = find_cut_epsilon_interval(prefs, agents_number, epsilon,
                                                  right_cut_bounds_update)
-    
-    equipartition = \
-        exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds,
-                                 right_cut_bounds, agents_number, epsilon)
+    if agents_number == 4:
+        equipartition = \
+            exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_bounds,
+                                                 right_cut_bounds, epsilon)
     return equipartition
 
 #Equipartition stuff above
@@ -1271,8 +1425,20 @@ def non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, left_bound,
     return cut_bounds.midpoint()
 
 
+# def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound, 
+#                          right_bound, epsilon):
+#     leftmost_unknown_cut = \
+#         non_adjacent_slice_cuts_update(indifferent_agent, prefs, 
+#                                        alpha, left_bound, right_bound, epsilon,
+#                                        leftmost_cut_bounds_one_apart_update)
+#     rightmost_unknown_cut = \
+#         non_adjacent_slice_cuts_update(indifferent_agent, prefs, 
+#                                        alpha, left_bound, right_bound, epsilon,
+#                                        rightmost_cut_bounds_one_apart_update)
+#     return leftmost_unknown_cut, rightmost_unknown_cut
+
 def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound, 
-                         right_bound, epsilon):
+                          right_bound, epsilon):
     leftmost_unknown_cut = \
         non_adjacent_slice_cuts_update(indifferent_agent, prefs, 
                                        alpha, left_bound, right_bound, epsilon,
