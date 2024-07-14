@@ -10,33 +10,6 @@ CORS(app)  # Enable CORS for cross-origin requests
 MAX_VALUATION = 10
 epsilon = 0.0025 / MAX_VALUATION
 
-@app.route('/api/three_agent', methods=['POST'])
-def three_agent():
-    data = request.json
-    preferences = data.get('preferences')
-    cake_size = data.get('cakeSize')
-    
-    # Call your algorithm function with preferences and cake_size
-    # result = branzei_nisan(preferences, cake_size)
-    # result_as_dict = [result.left, result.right]
-    # return jsonify({'result': result_as_dict})
-    return branzei_nisan(preferences, cake_size)
-
-@app.route('/api/four_agent', methods=['POST'])
-def four_agent():
-    data = request.json
-    preferences = data.get('preferences')
-    cake_size = data.get('cakeSize')
-    
-    # Call your algorithm function with preferences and cake_size
-    #result = hollender_rubinstein(preferences, cake_size)
-    #result_as_dict = [result.left, result.middle, result.right]
-    #return jsonify({'result': result_as_dict})
-    # division, assignment = hollender_rubinstein(preferences, cake_size)
-    # return jsonify({'division': division,
-    #                 'assignment': assignment})
-    return hollender_rubinstein(preferences, cake_size)
-
 #Preprocessing Below
 
 def normalization(prefs):
@@ -88,17 +61,34 @@ def interpolate(segment, x_coordinate):
     
 
 
-def find_partial_value(segment, partial_segment_end):
+def find_partial_value_right_side(segment, partial_segment_end):
     segment_width = partial_segment_end - segment['start']
+    partial_segment_start_value = segment['startValue']
     partial_segment_end_value = interpolate(segment, partial_segment_end)
+    return area_under_curve(segment, partial_segment_start_value,
+                            partial_segment_end_value, segment_width)
+    
+def find_partial_value_left_side(segment, partial_segment_start):
+    segment_width = segment['end'] - partial_segment_start
+    partial_segment_start_value = interpolate(segment, partial_segment_start)
+    partial_segment_end_value = segment['endValue']
+    return area_under_curve(segment, partial_segment_start_value,
+                            partial_segment_end_value, segment_width)
+    
+def find_partial_value_two_sided(segment, partial_segment_start, partial_segment_end):
+    segment_width = partial_segment_end - partial_segment_start
+    partial_segment_start_value = interpolate(segment, partial_segment_start)
+    partial_segment_end_value = interpolate(segment, partial_segment_end)
+    return area_under_curve(segment, partial_segment_start_value,
+                            partial_segment_end_value, segment_width)
+    
+def area_under_curve(segment, start_value, end_value, width):
     if segment['startValue'] == segment['endValue']:
-        value = segment['startValue'] * segment_width
+        value = start_value * width
         return value
     if segment['startValue'] != segment['endValue']:
-        value = 0.5 * (segment['startValue'] + partial_segment_end_value) * \
-                segment_width
+        value = 0.5 * (start_value + end_value) * width
         return value
-    
 
 def find_full_value(segment):
     segment_width = segment['end'] - segment['start']
@@ -117,7 +107,7 @@ def one_sided_query(agent, prefs, end):
         if end > prefs[agent][i]['end']:
             value += find_full_value(prefs[agent][i])
         if end <= prefs[agent][i]['end']:
-            value += find_partial_value(prefs[agent][i], end)
+            value += find_partial_value_right_side(prefs[agent][i], end)
             return value
         
 
@@ -126,13 +116,35 @@ def check_valid_bounds(start,end):
         "invalid bounds. start and end should be between 0 and 1."
     
 
+# def value_query_initial(agent, prefs, start, end):
+#     if end <= start:
+#         value = 0
+#     else:
+#         value = one_sided_query(agent, prefs, end) - \
+#                 one_sided_query(agent, prefs, start)
+#     return value
+
 def value_query_initial(agent, prefs, start, end):
     if end <= start:
         value = 0
+        return value
     else:
-        value = one_sided_query(agent, prefs, end) - \
-                one_sided_query(agent, prefs, start)
-    return value
+        segments = np.size(prefs[agent])
+        value = 0
+        for i in range(segments):
+            if start >= prefs[agent][i]['end']:
+                continue
+            if start >= prefs[agent][i]['start'] and end <= prefs[agent][i]['end']:
+                value = find_partial_value_two_sided(prefs[agent][i], start, end)
+                return value
+            if start >= prefs[agent][i]['start'] and end > prefs[agent][i]['end']:
+                value += find_partial_value_left_side(prefs[agent][i], start)
+                continue
+            if start < prefs[agent][i]['start'] and end > prefs[agent][i]['end']:
+                value += find_full_value(prefs[agent][i])
+            if start < prefs[agent][i]['start'] and end <= prefs[agent][i]['end']:
+                value += find_partial_value_right_side(prefs[agent][i], end)
+                return value
     
 
 def value_query_hungry(agent, prefs, start, end, epsilon):
@@ -729,7 +741,7 @@ def equipartition_cut(prefs, cut_bounds, agent_numbers,
 
 def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds, 
                              right_cut_bounds, agents_number, epsilon):
-    start = timer()
+    #start = timer()
     left_cut = equipartition_cut(prefs, left_cut_bounds, agents_number, epsilon,
                                  left_cut_bounds_update)
     right_cut= equipartition_cut(prefs, right_cut_bounds, agents_number, epsilon,
@@ -741,8 +753,8 @@ def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds,
                                       epsilon, middle_cut_bounds_update)
         equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
     alpha = value_query(0, prefs, 0, left_cut, epsilon)
-    end = timer()
-    print(end - start)
+    #end = timer()
+    #print(end - start)
     return equipartition, alpha
 
 
@@ -785,7 +797,7 @@ def equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds,
 
 def exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
                                          right_cut_bounds, epsilon):
-    start = timer()
+    #start = timer()
     left_cut = left_cut_bounds.midpoint()
     queries = equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
                                                 right_cut_bounds, epsilon)
@@ -826,8 +838,8 @@ def exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_boun
     left_cut = left_cut_bounds.midpoint()
     equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
     alpha = value_query(0, prefs, 0, left_cut, epsilon, queries[0])
-    end = timer()
-    print(end - start)
+    #end = timer()
+    #print(end - start)
     return equipartition, alpha
     
 
@@ -949,7 +961,7 @@ def find_cut_epsilon_interval(prefs, agents_number, epsilon, cut_bounds_update):
 
 
 def compute_equipartition(prefs, agents_number, epsilon):
-    start = timer()
+    #start = timer()
     left_cut_bounds = find_cut_epsilon_interval(prefs, agents_number, epsilon,
                                                 left_cut_bounds_update)
     if agents_number == 3:
@@ -970,8 +982,8 @@ def compute_equipartition(prefs, agents_number, epsilon):
         equipartition = \
             exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_bounds,
                                                  right_cut_bounds, epsilon)
-    end = timer()
-    print(end - start)
+    #end = timer()
+    #print(end - start)
     return equipartition
 
 #Equipartition stuff above
@@ -1517,7 +1529,7 @@ def one_apart_slice_cuts_exact(indifferent_agent, prefs, alpha, left_bound, righ
 
 def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound, 
                           right_bound, epsilon):
-    start = timer()
+    #start = timer()
     leftmost_unknown_cut_bounds = \
         non_adjacent_slice_cuts_update(indifferent_agent, prefs, 
                                        alpha, left_bound, right_bound, epsilon,
@@ -1532,8 +1544,8 @@ def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound,
                                    leftmost_unknown_cut_bounds,
                                    rightmost_unknown_cut_bounds,  
                                    epsilon)
-    end = timer()
-    print(end - start)
+    #end = timer()
+    #print(end - start)
     return leftmost_unknown_cut, rightmost_unknown_cut
 
 
@@ -1793,7 +1805,7 @@ def check_invariant_four_agents(prefs, alpha, epsilon, return_division = False):
     else:
         return False
     
-def assign_slices(division, prefs, agents_number, epsilon):
+def assign_slices(division, prefs, agents_number, epsilon, additive = False):
     if agents_number == 3:
         agents = [0,1,2]
         slices = [1,2,3]
@@ -1802,7 +1814,10 @@ def assign_slices(division, prefs, agents_number, epsilon):
         slices = [1,2,3,4]
     agent_slice_values = np.zeros((len(agents),len(slices)))
     for i in range(agents_number):
-        agent_slice_values[i] = slice_values(i, prefs, division, agents_number, epsilon)
+        if additive == False:
+            agent_slice_values[i] = slice_values(i, prefs, division, agents_number, epsilon)
+        else:
+            agent_slice_values[i] = slice_values_additive(i, prefs, division, epsilon)
     assignments = {}  # To store the assignments of slices to agents
 
     while len(agents) > 1:
@@ -1819,7 +1834,7 @@ def assign_slices(division, prefs, agents_number, epsilon):
             top_value = sorted_valuations["values"][0]
             second_value = sorted_valuations["values"][1]
             difference = top_value - second_value
-            value_for_print = sorted_valuations["slices"][0]
+            #value_for_print = sorted_valuations["slices"][0]
 
             if difference > max_difference:
                 max_difference = difference
@@ -1851,13 +1866,13 @@ def raw_division(division, cakeSize, agents_number):
                 "right": right_cut}
     
 
-def branzei_nisan(raw_prefs, cakeSize):
-    prefs = one_lipschitz(raw_prefs, cakeSize)
+def branzei_nisan(raw_prefs, cake_size):
+    prefs = one_lipschitz(raw_prefs, cake_size)
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 3, epsilon)
     if check_equipartition_envy_free_three_agents(prefs, alpha_lower_bound, 3,
                                                   epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 3, epsilon)
-        raw_envy_free_division = raw_division(equipartition, cakeSize, 3)
+        raw_envy_free_division = raw_division(equipartition, cake_size, 3)
         return jsonify({'division': raw_envy_free_division,
                         'assignment': slice_assignments})
     alpha_upper_bound = 1
@@ -1869,21 +1884,21 @@ def branzei_nisan(raw_prefs, cakeSize):
         else:
             alpha_bounds.upper = alpha
     envy_free_division = division_three_agents(prefs, alpha_bounds.lower, epsilon)
-    raw_equipartition = raw_division(equipartition, cakeSize, 3)
+    raw_equipartition = raw_division(equipartition, cake_size, 3)
     slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon)
-    raw_envy_free_division = raw_division(envy_free_division, cakeSize, 3)
+    raw_envy_free_division = raw_division(envy_free_division, cake_size, 3)
     return jsonify({'equipartition': raw_equipartition,
                     'division': raw_envy_free_division,
                     'assignment': slice_assignments})
 
 
-def hollender_rubinstein(raw_prefs, cakeSize):
-    prefs = one_lipschitz(raw_prefs, cakeSize)
+def hollender_rubinstein(raw_prefs, cake_size):
+    prefs = one_lipschitz(raw_prefs, cake_size)
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 4, epsilon)
     if check_equipartition_envy_free_four_agents(prefs, alpha_lower_bound, 4,
                                                  epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 4, epsilon)
-        raw_envy_free_division = raw_division(equipartition, cakeSize, 4)
+        raw_envy_free_division = raw_division(equipartition, cake_size, 4)
         return jsonify({'division': raw_envy_free_division,
                         'assignment': slice_assignments})
     alpha_upper_bound = 1
@@ -1896,13 +1911,255 @@ def hollender_rubinstein(raw_prefs, cakeSize):
             alpha_bounds.upper = alpha
     envy_free_division = check_invariant_four_agents(prefs, alpha_bounds.lower, epsilon,
                                                      return_division = True)
-    raw_equipartition = raw_division(equipartition, cakeSize, 4)
+    raw_equipartition = raw_division(equipartition, cake_size, 4)
     slice_assignments = assign_slices(envy_free_division, prefs, 4, epsilon)
-    raw_envy_free_division = raw_division(envy_free_division, cakeSize, 4)
+    raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
     return jsonify({'equipartition': raw_equipartition,
                     'division': raw_envy_free_division,
                     'assignment': slice_assignments})
     #return raw_envy_free_division, slice_assignments
+
+def value_query_additive(agent, prefs, start, end, epsilon):
+    initial_value = value_query_initial(agent, prefs, start, end)
+    value = (1 - epsilon / 2) * initial_value  + epsilon / 2
+    return value
+
+def end_cut_query_additive(agent, prefs, start, value, epsilon):
+    end_cut_bounds = Bounds(start, 1)
+    while (end_cut_bounds.upper - end_cut_bounds.lower) > epsilon / 2 :
+        end_cut_bounds = end_cut_bounds_update_additive(agent, prefs, start, end_cut_bounds, 
+                                                        value, epsilon)
+    end_cut = end_cut_bounds.midpoint()
+    return end_cut
+
+def end_cut_bounds_update_additive(agent, prefs, start, end_cut_bounds, 
+                                   value, epsilon):
+    end_cut = end_cut_bounds.midpoint()
+    queried_value = value_query_additive(agent, prefs, start, end_cut, epsilon)
+    if queried_value <= value:
+        end_cut_bounds.lower  = end_cut
+    if queried_value > value:
+        end_cut_bounds.upper = end_cut
+    return end_cut_bounds
+
+def start_cut_query_additive(agent, prefs, end, value, epsilon):
+    start_cut_bounds = Bounds(0, end)
+    while (start_cut_bounds.upper - start_cut_bounds.lower) > epsilon / 2:
+        start_cut_bounds = start_cut_bounds_update_additive(agent, prefs, end, start_cut_bounds, 
+                                                            value, epsilon)
+    start_cut = start_cut_bounds.midpoint()
+    return start_cut
+
+
+def start_cut_bounds_update_additive(agent, prefs, end, start_cut_bounds, 
+                            value, epsilon):
+    start_cut = start_cut_bounds.midpoint()
+    queried_value = value_query_additive(agent, prefs, start_cut, end, epsilon)
+    if queried_value <= value:
+        start_cut_bounds.upper  = start_cut
+    if queried_value > value:
+        start_cut_bounds.lower = start_cut
+    return start_cut_bounds
+
+
+def cut_query_additive(agent, prefs, initial_cut, value, epsilon, end_cut = True):
+    #Must add functionality that returns if there is no cut.
+    if end_cut == True:
+        queried_cut = end_cut_query_additive(agent, prefs, initial_cut, value, epsilon)
+    else:
+        queried_cut = start_cut_query_additive(agent, prefs, initial_cut, value, epsilon)
+    return queried_cut
+
+
+def bisection_cut_query_additive(agent, prefs, start, end, epsilon):
+    half_value = value_query_additive(agent, prefs, start,
+                                          end, epsilon) / 2
+    mid_cut = cut_query(agent, prefs, start, half_value, epsilon, end_cut = True)
+    return mid_cut
+
+
+
+def compute_equipartition_additive(prefs, epsilon):
+    agents = [0,1,2]
+    rightmost_mark = 0
+    for i in agents:
+        third_of_total = value_query_additive(i, prefs, 0, 1, epsilon) / 3
+        right_cut = cut_query_additive(i, prefs, 1, third_of_total, epsilon, end_cut = False)
+        if right_cut > rightmost_mark:
+            rightmost_mark = right_cut
+            chosen_agent = i
+    third_of_total = value_query_additive(chosen_agent, prefs, 0, 1, epsilon) / 3
+    left_cut = cut_query_additive(chosen_agent, prefs, 0, third_of_total, epsilon, end_cut = True)
+    right_cut = rightmost_mark
+    division = ThreeAgentPortion(left_cut, right_cut)
+    return division, chosen_agent
+
+def slice_values_additive(agent, prefs, division, epsilon):
+    left_slice_value = np.array([value_query_additive(agent, prefs, 0, division.left, 
+                                                      epsilon)])
+    middle_slice_value = np.array([value_query_additive(agent, prefs, division.left, division.right, 
+                                                         epsilon)])
+    right_slice_value = np.array([value_query_additive(agent, prefs, division.right, 1, 
+                                                       epsilon)])
+    return np.concatenate([left_slice_value, middle_slice_value, 
+                           right_slice_value])
+
+def check_unique_preferences_additive(prefs, division, epsilon):
+    agents = [0,1,2]
+    agents_number = 3
+    slices_number = 3
+    agent_slice_values = np.zeros(agents_number,slices_number)
+    for agent in agents:
+        agent_slice_values[agent] = slice_values_additive(agent, prefs, division, epsilon)                                                                        
+    for i in range(3):
+        for j in range(3):
+            for k in range(3):
+                if (j == i) or (j == k) or (i == k):
+                    continue
+                if  (np.isclose(agent_slice_values[0][i], 
+                                np.max(agent_slice_values[0]), rtol = 0, atol = epsilon / 2) and \
+                    np.isclose(agent_slice_values[1][j], 
+                                np.max(agent_slice_values[1]), rtol = 0, atol = epsilon / 2) and \
+                    np.isclose(agent_slice_values[2][k],
+                                np.max(agent_slice_values[2]), rtol = 0, atol = epsilon / 2)):
+                    return True
+    return False
+
+def middle_preferred_check(prefs, division, chosen_agent, epsilon):
+    agents = [0,1,2]
+    agents = np.delete(agents, chosen_agent)
+    agents_number = 3
+    slices_number = 3
+    agent_slice_values = np.zeros(agents_number,slices_number)
+    for agent in agents:
+        agent_slice_values[agent] = slice_values_additive(agent, prefs, division, epsilon)
+    if  (np.isclose(agent_slice_values[agents[0]][1], 
+                    np.max(agent_slice_values[agents[0]]), rtol = 0, atol = epsilon / 2) and \
+         np.isclose(agent_slice_values[agents[1]][1],
+                    np.max(agent_slice_values[agents[1]]), rtol = 0, atol = epsilon / 2)):   
+        return True
+    else:
+        return False
+
+def middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
+    right_cut = bisection_cut_query_additive(chosen_agent, prefs, cut_bounds.lower,
+                                             cut_bounds.upper, epsilon)
+    right_slice_value = value_query_additive(chosen_agent, prefs, right_cut, 1, epsilon) 
+    left_cut = cut_query_additive(chosen_agent, prefs, 0, right_slice_value, epsilon, end_cut = True) 
+    division = ThreeAgentPortion(left_cut, right_cut)
+    if middle_preferred_check(prefs, division, chosen_agent, epsilon) == True:
+        cut_bounds.upper = right_cut
+    else:
+        cut_bounds.lower = right_cut 
+    return cut_bounds, division                                                                                                                                          
+    
+
+def middle_preferred_case(prefs, division, chosen_agent, epsilon):
+    lower_bound = division.right
+    half_of_total = value_query_additive(chosen_agent, prefs, 0, 1, epsilon) / 2
+    upper_bound = cut_query_additive(chosen_agent, prefs, 1, 
+                                     half_of_total, epsilon, end_cut = False)
+    cut_bounds = Bounds(lower_bound, upper_bound)
+    while check_unique_preferences_additive(prefs, division, epsilon) == False:
+        cut_bounds, division = middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon)
+    return division
+
+def left_preferred_check(prefs, division, chosen_agent, epsilon):
+    agents = [0,1,2]
+    agents = np.delete(agents, chosen_agent)
+    agents_number = 3
+    slices_number = 3
+    agent_slice_values = np.zeros(agents_number,slices_number)
+    for agent in agents:
+        agent_slice_values[agent] = slice_values_additive(agent, prefs, division, epsilon)
+    if  (np.isclose(agent_slice_values[agents[0]][0], 
+                    np.max(agent_slice_values[agents[0]]), rtol = 0, atol = epsilon / 2) and \
+         np.isclose(agent_slice_values[agents[1]][0],
+                    np.max(agent_slice_values[agents[1]]), rtol = 0, atol = epsilon / 2)):   
+        return True
+    else:
+        return False
+
+def left_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
+    left_cut = bisection_cut_query_additive(chosen_agent, prefs, cut_bounds.lower,
+                                            cut_bounds.upper, epsilon)
+    right_cut = bisection_cut_query_additive(chosen_agent, prefs, left_cut, 1, epsilon) 
+    division = ThreeAgentPortion(left_cut, right_cut)
+    if left_preferred_check(prefs, division, chosen_agent, epsilon) == True:
+        cut_bounds.upper = left_cut
+    else:
+        cut_bounds.lower = 0 
+    return cut_bounds, division                                                                                                                                          
+    
+
+def left_preferred_case(prefs, division, chosen_agent, epsilon):
+    lower_bound = 0
+    upper_bound = division.left
+    cut_bounds = Bounds(lower_bound, upper_bound)
+    while check_unique_preferences_additive(prefs, division, epsilon) == False:
+        cut_bounds, division = left_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon)
+    return division
+
+
+def branzei_nisan_additive(raw_prefs, cakeSize):
+    prefs = one_lipschitz(raw_prefs, cakeSize)
+    equipartition, chosen_agent = compute_equipartition_additive(prefs, epsilon)
+    if check_unique_preferences_additive(prefs, equipartition, epsilon) == True:
+        slice_assignments = assign_slices(equipartition, prefs, 3, epsilon, additive = True)
+        raw_envy_free_division = raw_division(equipartition, cakeSize, 3)
+        return jsonify({'division': raw_envy_free_division,
+                        'assignment': slice_assignments})
+    if middle_preferred_check(prefs, equipartition, chosen_agent, epsilon) == True:
+        envy_free_division = middle_preferred_case(prefs, equipartition, chosen_agent, epsilon)
+    else:
+        envy_free_division = left_preferred_case(prefs, equipartition, chosen_agent, epsilon)
+    raw_equipartition = raw_division(equipartition, cakeSize, 3)
+    slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon, additive = True)
+    raw_envy_free_division = raw_division(envy_free_division, cakeSize, 3)
+    return jsonify({'equipartition': raw_equipartition,
+                    'division': raw_envy_free_division,
+                    'assignment': slice_assignments})
+
+
+@app.route('/api/three_agent_additive', methods=['POST'])
+def three_agent_additive():
+    data = request.json
+    preferences = data.get('preferences')
+    cake_size = data.get('cakeSize')
+    
+    # Call your algorithm function with preferences and cake_size
+    # result = branzei_nisan(preferences, cake_size)
+    # result_as_dict = [result.left, result.right]
+    # return jsonify({'result': result_as_dict})
+    return branzei_nisan_additive(preferences, cake_size)
+
+
+@app.route('/api/three_agent', methods=['POST'])
+def three_agent():
+    data = request.json
+    preferences = data.get('preferences')
+    cake_size = data.get('cakeSize')
+    
+    # Call your algorithm function with preferences and cake_size
+    # result = branzei_nisan(preferences, cake_size)
+    # result_as_dict = [result.left, result.right]
+    # return jsonify({'result': result_as_dict})
+    return branzei_nisan(preferences, cake_size)
+
+@app.route('/api/four_agent', methods=['POST'])
+def four_agent():
+    data = request.json
+    preferences = data.get('preferences')
+    cake_size = data.get('cakeSize')
+    
+    # Call your algorithm function with preferences and cake_size
+    #result = hollender_rubinstein(preferences, cake_size)
+    #result_as_dict = [result.left, result.middle, result.right]
+    #return jsonify({'result': result_as_dict})
+    # division, assignment = hollender_rubinstein(preferences, cake_size)
+    # return jsonify({'division': division,
+    #                 'assignment': assignment})
+    return hollender_rubinstein(preferences, cake_size)
 
 
 class Bounds:
