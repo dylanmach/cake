@@ -1098,15 +1098,17 @@ def division_three_agents(prefs, alpha, epsilon):
         right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
         left_cut = cut_query(0, prefs, right_cut, alpha, 
                              epsilon, end_cut = False)
+        slices = 1
     if check_invariant_three_agents(prefs, alpha, epsilon)[1] == 2:
         left_cut = cut_query(0, prefs, 0, alpha, epsilon)
         right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
-        
+        slices = 2
     if check_invariant_three_agents(prefs, alpha, epsilon)[1] == 3:
         left_cut = cut_query(0, prefs, 0, alpha, epsilon)
         right_cut = cut_query(0, prefs, left_cut, alpha, epsilon)
+        slices = 3
     division = ThreeAgentPortion(left_cut,right_cut)
-    return division
+    return division, slices
     
 #3 agent invariant checks above
 
@@ -1211,7 +1213,10 @@ def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = Fal
         return False
     check_value = condition_a_check(1, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        info = pd.DataFrame({'condition': 1,
+                             'slices': 1,
+                             'indifferent_agent': None})
+        return division, info
     else:
         return check_value
     
@@ -1231,7 +1236,10 @@ def condition_a_slice_two_preferred(prefs, alpha, epsilon, return_division = Fal
         return False
     check_value = condition_a_check(2, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        info = pd.DataFrame({'condition': 1,
+                             'slices': 2,
+                             'indifferent_agent': None})
+        return division, info
     else:
         return check_value
     
@@ -1251,7 +1259,10 @@ def condition_a_slice_three_preferred(prefs, alpha, epsilon, return_division = F
         return False
     check_value = condition_a_check(3, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        info = pd.DataFrame({'condition': 1,
+                             'slices': 3,
+                             'indifferent_agent': None})
+        return division, info
     else:
         return check_value
     
@@ -1271,7 +1282,10 @@ def condition_a_slice_four_preferred(prefs, alpha, epsilon, return_division = Fa
         return False
     check_value = condition_a_check(4, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
-        return division
+        info = pd.DataFrame({'condition': 1,
+                             'slices': 4,
+                             'indifferent_agent': None})
+        return division, info
     else:
         return check_value
     
@@ -1331,7 +1345,10 @@ def condition_b_slice_one_two_preferred(prefs, alpha, epsilon, return_division =
             continue
         check_value = condition_b_check([1,2], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            info = pd.DataFrame({'condition': 2,
+                                 'slices': [1,2],
+                                 'indifferent_agent': i})
+            return division, info
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -1355,7 +1372,10 @@ def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division
             continue
         check_value = condition_b_check([2,3], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            info = pd.DataFrame({'condition': 2,
+                                 'slices': [2,3],
+                                 'indifferent_agent': i})
+            return division, info
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -1377,7 +1397,10 @@ def condition_b_slice_three_four_preferred(prefs, alpha, epsilon, return_divisio
             continue
         check_value = condition_b_check([3,4], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            info = pd.DataFrame({'condition': 2,
+                                 'slices': [3,4],
+                                 'indifferent_agent': i})
+            return division, info
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -1561,7 +1584,10 @@ def condition_b_slice_one_three_preferred(prefs, alpha, epsilon, return_division
             continue
         check_value = condition_b_check([1,3], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            info = pd.DataFrame({'condition': 2,
+                                 'slices': [1,3],
+                                 'indifferent_agent': i})
+            return division, info
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -1581,7 +1607,10 @@ def condition_b_slice_two_four_preferred(prefs, alpha, epsilon, return_division 
             continue
         check_value = condition_b_check([2,4], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            info = pd.DataFrame({'condition': 2,
+                                 'slices': [2,4],
+                                 'indifferent_agent': i})
+            return division, info
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -1768,7 +1797,10 @@ def condition_b_slice_one_four_preferred(prefs, alpha, epsilon, return_division 
             continue
         check_value = condition_b_check([1,4], prefs, alpha, division, epsilon)
         if (check_value == True) and (return_division == True):
-            return division
+            info = pd.DataFrame({'condition': 2,
+                                 'slices': [1,4],
+                                 'indifferent_agent': i})
+            return division, info
         if (check_value == True) and (return_division == False):
             return check_value
         else:
@@ -1867,6 +1899,7 @@ def raw_division(division, cakeSize, agents_number):
     
 
 def branzei_nisan(raw_prefs, cake_size):
+    #Need to implement specifics in line with four agent algo
     prefs = one_lipschitz(raw_prefs, cake_size)
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 3, epsilon)
     if check_equipartition_envy_free_three_agents(prefs, alpha_lower_bound, 3,
@@ -1874,7 +1907,8 @@ def branzei_nisan(raw_prefs, cake_size):
         slice_assignments = assign_slices(equipartition, prefs, 3, epsilon)
         raw_envy_free_division = raw_division(equipartition, cake_size, 3)
         return jsonify({'division': raw_envy_free_division,
-                        'assignment': slice_assignments})
+                        'assignment': slice_assignments,
+                        'condition': 0})
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
     while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
@@ -1883,13 +1917,15 @@ def branzei_nisan(raw_prefs, cake_size):
             alpha_bounds.lower = alpha
         else:
             alpha_bounds.upper = alpha
-    envy_free_division = division_three_agents(prefs, alpha_bounds.lower, epsilon)
+    envy_free_division, slices = division_three_agents(prefs, alpha_bounds.lower, epsilon)
     raw_equipartition = raw_division(equipartition, cake_size, 3)
     slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cake_size, 3)
     return jsonify({'equipartition': raw_equipartition,
                     'division': raw_envy_free_division,
-                    'assignment': slice_assignments})
+                    'assignment': slice_assignments,
+                    'condition': 1,
+                    'slices': slices})
 
 
 def hollender_rubinstein(raw_prefs, cake_size):
@@ -1900,7 +1936,8 @@ def hollender_rubinstein(raw_prefs, cake_size):
         slice_assignments = assign_slices(equipartition, prefs, 4, epsilon)
         raw_envy_free_division = raw_division(equipartition, cake_size, 4)
         return jsonify({'division': raw_envy_free_division,
-                        'assignment': slice_assignments})
+                        'assignment': slice_assignments,
+                        'condition': 0})
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
     while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
@@ -1909,14 +1946,17 @@ def hollender_rubinstein(raw_prefs, cake_size):
             alpha_bounds.lower = alpha
         else:
             alpha_bounds.upper = alpha
-    envy_free_division = check_invariant_four_agents(prefs, alpha_bounds.lower, epsilon,
-                                                     return_division = True)
+    envy_free_division, info = check_invariant_four_agents(prefs, alpha_bounds.lower, 
+                                                           epsilon, return_division = True)
     raw_equipartition = raw_division(equipartition, cake_size, 4)
     slice_assignments = assign_slices(envy_free_division, prefs, 4, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
     return jsonify({'equipartition': raw_equipartition,
                     'division': raw_envy_free_division,
-                    'assignment': slice_assignments})
+                    'assignment': slice_assignments,
+                    'condition': info['condition'],
+                    'slices': info['slices'],
+                    'indifferent_agent': info['indifferent_agent']})
     #return raw_envy_free_division, slice_assignments
 
 def value_query_additive(agent, prefs, start, end, epsilon):
@@ -2112,17 +2152,22 @@ def branzei_nisan_additive(raw_prefs, cakeSize):
         slice_assignments = assign_slices(equipartition, prefs, 3, epsilon, additive = True)
         raw_envy_free_division = raw_division(equipartition, cakeSize, 3)
         return jsonify({'division': raw_envy_free_division,
-                        'assignment': slice_assignments})
+                        'assignment': slice_assignments,
+                        'condition': 0})
     if middle_preferred_check(prefs, equipartition, chosen_agent, epsilon) == True:
         envy_free_division = middle_preferred_case(prefs, equipartition, chosen_agent, epsilon)
+        specifics = 0
     else:
         envy_free_division = left_preferred_case(prefs, equipartition, chosen_agent, epsilon)
+        specifics = 1
     raw_equipartition = raw_division(equipartition, cakeSize, 3)
     slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon, additive = True)
     raw_envy_free_division = raw_division(envy_free_division, cakeSize, 3)
     return jsonify({'equipartition': raw_equipartition,
                     'division': raw_envy_free_division,
-                    'assignment': slice_assignments})
+                    'assignment': slice_assignments,
+                    'condition': 1,
+                    'specifics': specifics})
 
 
 @app.route('/api/three_agent_additive', methods=['POST'])
