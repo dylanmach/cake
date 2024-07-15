@@ -1924,9 +1924,13 @@ def value_query_additive(agent, prefs, start, end, epsilon):
     value = (1 - epsilon / 2) * initial_value  + epsilon / 2
     return value
 
+# def value_query_additive(agent, prefs, start, end, epsilon):
+#     return value_query_initial(agent, prefs, start, end)
+
+
 def end_cut_query_additive(agent, prefs, start, value, epsilon):
     end_cut_bounds = Bounds(start, 1)
-    while (end_cut_bounds.upper - end_cut_bounds.lower) > epsilon / 2 :
+    while (end_cut_bounds.upper - end_cut_bounds.lower) > epsilon / 200:
         end_cut_bounds = end_cut_bounds_update_additive(agent, prefs, start, end_cut_bounds, 
                                                         value, epsilon)
     end_cut = end_cut_bounds.midpoint()
@@ -1944,7 +1948,7 @@ def end_cut_bounds_update_additive(agent, prefs, start, end_cut_bounds,
 
 def start_cut_query_additive(agent, prefs, end, value, epsilon):
     start_cut_bounds = Bounds(0, end)
-    while (start_cut_bounds.upper - start_cut_bounds.lower) > epsilon / 2:
+    while (start_cut_bounds.upper - start_cut_bounds.lower) > epsilon / 200:
         start_cut_bounds = start_cut_bounds_update_additive(agent, prefs, end, start_cut_bounds, 
                                                             value, epsilon)
     start_cut = start_cut_bounds.midpoint()
@@ -1973,8 +1977,8 @@ def cut_query_additive(agent, prefs, initial_cut, value, epsilon, end_cut = True
 
 def bisection_cut_query_additive(agent, prefs, start, end, epsilon):
     half_value = value_query_additive(agent, prefs, start,
-                                          end, epsilon) / 2
-    mid_cut = cut_query(agent, prefs, start, half_value, epsilon, end_cut = True)
+                                      end, epsilon) / 2
+    mid_cut = cut_query_additive(agent, prefs, start, half_value, epsilon, end_cut = True)
     return mid_cut
 
 
@@ -2008,7 +2012,7 @@ def check_unique_preferences_additive(prefs, division, epsilon):
     agents = [0,1,2]
     agents_number = 3
     slices_number = 3
-    agent_slice_values = np.zeros(agents_number,slices_number)
+    agent_slice_values = np.zeros((agents_number,slices_number))
     for agent in agents:
         agent_slice_values[agent] = slice_values_additive(agent, prefs, division, epsilon)                                                                        
     for i in range(3):
@@ -2017,11 +2021,11 @@ def check_unique_preferences_additive(prefs, division, epsilon):
                 if (j == i) or (j == k) or (i == k):
                     continue
                 if  (np.isclose(agent_slice_values[0][i], 
-                                np.max(agent_slice_values[0]), rtol = 0, atol = epsilon / 2) and \
+                                np.max(agent_slice_values[0]), rtol = 0, atol = epsilon) and \
                     np.isclose(agent_slice_values[1][j], 
-                                np.max(agent_slice_values[1]), rtol = 0, atol = epsilon / 2) and \
+                                np.max(agent_slice_values[1]), rtol = 0, atol = epsilon) and \
                     np.isclose(agent_slice_values[2][k],
-                                np.max(agent_slice_values[2]), rtol = 0, atol = epsilon / 2)):
+                                np.max(agent_slice_values[2]), rtol = 0, atol = epsilon)):
                     return True
     return False
 
@@ -2030,7 +2034,7 @@ def middle_preferred_check(prefs, division, chosen_agent, epsilon):
     agents = np.delete(agents, chosen_agent)
     agents_number = 3
     slices_number = 3
-    agent_slice_values = np.zeros(agents_number,slices_number)
+    agent_slice_values = np.zeros((agents_number,slices_number))
     for agent in agents:
         agent_slice_values[agent] = slice_values_additive(agent, prefs, division, epsilon)
     if  (np.isclose(agent_slice_values[agents[0]][1], 
@@ -2055,9 +2059,9 @@ def middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
     
 
 def middle_preferred_case(prefs, division, chosen_agent, epsilon):
-    lower_bound = division.right
+    upper_bound = division.right
     half_of_total = value_query_additive(chosen_agent, prefs, 0, 1, epsilon) / 2
-    upper_bound = cut_query_additive(chosen_agent, prefs, 1, 
+    lower_bound = cut_query_additive(chosen_agent, prefs, 1, 
                                      half_of_total, epsilon, end_cut = False)
     cut_bounds = Bounds(lower_bound, upper_bound)
     while check_unique_preferences_additive(prefs, division, epsilon) == False:
@@ -2069,7 +2073,7 @@ def left_preferred_check(prefs, division, chosen_agent, epsilon):
     agents = np.delete(agents, chosen_agent)
     agents_number = 3
     slices_number = 3
-    agent_slice_values = np.zeros(agents_number,slices_number)
+    agent_slice_values = np.zeros((agents_number,slices_number))
     for agent in agents:
         agent_slice_values[agent] = slice_values_additive(agent, prefs, division, epsilon)
     if  (np.isclose(agent_slice_values[agents[0]][0], 
@@ -2131,7 +2135,7 @@ def three_agent_additive():
     # result = branzei_nisan(preferences, cake_size)
     # result_as_dict = [result.left, result.right]
     # return jsonify({'result': result_as_dict})
-    return branzei_nisan_additive(preferences, cake_size)
+    return branzei_nisan(preferences, cake_size)
 
 
 @app.route('/api/three_agent', methods=['POST'])
