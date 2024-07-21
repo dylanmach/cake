@@ -19,7 +19,7 @@ const getText = (piece: Slice) => {
 }
 
 export const ResultsSteps = ({ algoUsed, result }: ResultsStepsProps) => {
-  const { width, height, xScale, names = [] } = useContext(GraphContext)
+  const { width, height, xScale, names = [null, null, null, null, "The Algorithm"] } = useContext(GraphContext)
 console.log('results',result)
   return (
     <ResultsContainer title="Algorithm Steps" id="steps">
