@@ -3,6 +3,8 @@ from flask_cors import CORS
 import numpy as np
 import pandas as pd
 from timeit import default_timer as timer
+import itertools
+from scipy.optimize import minimize
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for cross-origin requests
@@ -1214,7 +1216,7 @@ def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = Fal
     check_value = condition_a_check(1, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
         info = pd.DataFrame({'condition': 1,
-                             'slices': 1,
+                             'slices': [1],
                              'indifferent_agent': None})
         return division, info
     else:
@@ -1237,7 +1239,7 @@ def condition_a_slice_two_preferred(prefs, alpha, epsilon, return_division = Fal
     check_value = condition_a_check(2, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
         info = pd.DataFrame({'condition': 1,
-                             'slices': 2,
+                             'slices': [2],
                              'indifferent_agent': None})
         return division, info
     else:
@@ -1260,7 +1262,7 @@ def condition_a_slice_three_preferred(prefs, alpha, epsilon, return_division = F
     check_value = condition_a_check(3, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
         info = pd.DataFrame({'condition': 1,
-                             'slices': 3,
+                             'slices': [3],
                              'indifferent_agent': None})
         return division, info
     else:
@@ -1283,7 +1285,7 @@ def condition_a_slice_four_preferred(prefs, alpha, epsilon, return_division = Fa
     check_value = condition_a_check(4, prefs, alpha, division, epsilon)
     if (check_value == True) and (return_division == True):
         info = pd.DataFrame({'condition': 1,
-                             'slices': 4,
+                             'slices': [4],
                              'indifferent_agent': None})
         return division, info
     else:
@@ -1384,6 +1386,8 @@ def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division
 
 
 def condition_b_slice_three_four_preferred(prefs, alpha, epsilon, return_division = False):
+    if np.isclose(alpha, 0.08135672927733817, rtol = 0, atol = 1e-15):
+        x = 1
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
     if left_cut is None:
         return False
@@ -1935,9 +1939,12 @@ def hollender_rubinstein(raw_prefs, cake_size):
                                                  epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 4, epsilon)
         raw_envy_free_division = raw_division(equipartition, cake_size, 4)
-        return jsonify({'division': raw_envy_free_division,
+        return jsonify({'equipartition': raw_envy_free_division,
+                        'division': 0,
                         'assignment': slice_assignments,
-                        'condition': 0})
+                        'condition': [0],
+                        'slices': 0,
+                        'indifferent_agent': 0})
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
     while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
@@ -1946,6 +1953,7 @@ def hollender_rubinstein(raw_prefs, cake_size):
             alpha_bounds.lower = alpha
         else:
             alpha_bounds.upper = alpha
+    x = 1
     envy_free_division, info = check_invariant_four_agents(prefs, alpha_bounds.lower, 
                                                            epsilon, return_division = True)
     raw_equipartition = raw_division(equipartition, cake_size, 4)
@@ -1954,18 +1962,54 @@ def hollender_rubinstein(raw_prefs, cake_size):
     return jsonify({'equipartition': raw_equipartition,
                     'division': raw_envy_free_division,
                     'assignment': slice_assignments,
-                    'condition': info['condition'],
-                    'slices': info['slices'],
-                    'indifferent_agent': info['indifferent_agent']})
+                    'condition': info['condition'].to_list(),
+                    'slices': info['slices'].to_list(),
+                    'indifferent_agent': info['indifferent_agent'].to_list()})
     #return raw_envy_free_division, slice_assignments
 
-def value_query_additive(agent, prefs, start, end, epsilon):
-    initial_value = value_query_initial(agent, prefs, start, end)
+def value_query_hungry_additive(agent, prefs, end, epsilon):
+    initial_value = value_query_initial(agent, prefs, 0, end)
     value = (1 - epsilon / 2) * initial_value  + epsilon / 2
     return value
 
 # def value_query_additive(agent, prefs, start, end, epsilon):
-#     return value_query_initial(agent, prefs, start, end)
+#     initial_value = value_query_initial(agent, prefs, start, end)
+#     value = (1 - epsilon / 2) * initial_value  + epsilon / 2
+#     return value
+
+
+def value_query_piecewise_additive(agent, prefs, end, epsilon):
+    check = end % epsilon
+    assert np.isclose(check, 0, rtol = 0, atol= 1e-15) or \
+           np.isclose(check, epsilon, rtol = 0, atol= 1e-15),\
+           'end cut must be divisible by epsilon'
+    initial_value = value_query_hungry_additive(agent, prefs, end, epsilon) 
+    if initial_value % epsilon == 0:
+        return initial_value
+    else:
+        final_value = (initial_value // epsilon) * epsilon + epsilon
+        return final_value
+    
+def value_query_interpolated_additive(agent, prefs, end, epsilon):
+    check = end % epsilon
+    if np.isclose(check, 0, rtol = 0, atol= 1e-15) or \
+        np.isclose(check, epsilon, rtol = 0, atol= 1e-15):
+        value =  value_query_piecewise_additive(agent, prefs, end, epsilon)
+        return value 
+    else:
+        interpolation_constant = (end % epsilon) / epsilon
+        end_left =  (end // epsilon) * epsilon
+        end_right = end_left + epsilon
+        value_left = value_query_piecewise_additive(agent, prefs, end_left, epsilon)
+        value_right = value_query_piecewise_additive(agent, prefs, end_right, epsilon)
+        value = value_left + (value_right - value_left) * interpolation_constant
+        return value
+
+def value_query_additive(agent, prefs, start, end, epsilon):
+    component_one = value_query_interpolated_additive(agent, prefs, start, epsilon)
+    component_two = value_query_interpolated_additive(agent, prefs, end, epsilon)
+    value = component_two - component_one
+    return value
 
 
 def end_cut_query_additive(agent, prefs, start, value, epsilon):
@@ -2132,7 +2176,7 @@ def left_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
     if left_preferred_check(prefs, division, chosen_agent, epsilon) == True:
         cut_bounds.upper = left_cut
     else:
-        cut_bounds.lower = 0 
+        cut_bounds.lower = left_cut
     return cut_bounds, division                                                                                                                                          
     
 
@@ -2170,6 +2214,439 @@ def branzei_nisan_additive(raw_prefs, cakeSize):
                     'specifics': specifics})
 
 
+#piecewise-constant algorithm
+
+def find_segments_intervals(prefs):
+    breakpoints = set()
+    for agents in prefs:
+        for segments in agents:
+            breakpoints.add(segments['start'])
+            breakpoints.add(segments['end'])
+
+    # Convert breakpoints to a sorted list
+    sorted_breakpoints = sorted(breakpoints)
+    segment_intervals=[]
+    for i in range(1, len(sorted_breakpoints)):
+        left = sorted_breakpoints[i-1]
+        right = sorted_breakpoints[i]
+        segment_intervals.append({
+                'start': left,
+                'end': right
+            })
+    return segment_intervals
+
+
+def find_segments(prefs, agents_number):
+    segments_intervals = find_segments_intervals(prefs)
+    segmented_prefs = [[] for _ in range(agents_number)]
+    for i in range(agents_number):
+        for segments in prefs[i]:
+            for intervals in segments_intervals:
+                if (((segments['start'] >= intervals['start']) and (segments['start'] < intervals['end'])) or \
+                    ((segments['end'] > intervals['start']) and (segments['end'] <= intervals['end']))):
+                    segmented_prefs[i].append({'start': intervals['start'],
+                                               'end': intervals['end'],
+                                               'value': segments['startValue'],
+                                               'area': (intervals['end'] - intervals['start']) * segments['startValue']})
+    return segmented_prefs
+
+
+def first_slice_value(x, segments, agent, cut):
+    first_agent_constant_value = 0
+    cut_range = segments[agent][cut]['end'] - segments[agent][cut]['start']
+    for i in range(cut):
+        first_agent_constant_value += segments[agent][i]['area']
+    first_agent_variable_value = segments[agent][cut]['value']
+    if ((0 <= x) and (x <= cut_range)):
+        value = first_agent_constant_value + x * first_agent_variable_value 
+        return value 
+    else:
+        return "Input out of bounds"
+    
+
+def middle_slice_value(x, y, segments, agent, cut_one, cut_two):
+    cut_one_range = segments[agent][cut_one]['end'] - segments[agent][cut_one]['start']
+    cut_two_range = segments[agent][cut_two]['end'] - segments[agent][cut_two]['start']
+    middle_agent_constant_value = 0
+    for i in range(cut_one+1, cut_two):
+        middle_agent_constant_value += segments[agent][i]['area']
+    middle_agent_variable_value_component_one = segments[agent][cut_one]['value']
+    middle_agent_variable_value_component_two = segments[agent][cut_two]['value']
+    assert (((0 <= x) and (x <= cut_one_range)) and ((0 <= y) and (y <= cut_two_range))), \
+        "cut out of range"
+    if cut_one != cut_two:
+        value = middle_agent_constant_value + (cut_one_range - x) * middle_agent_variable_value_component_one + \
+                y * middle_agent_variable_value_component_two
+    else:
+        value = middle_agent_constant_value + (y - x) * middle_agent_variable_value_component_one
+    return value
+
+
+def last_slice_value(y, segments, agent, cut):
+    last_agent_constant_value = 0
+    cut_range = segments[agent][cut]['end'] - segments[agent][cut]['start']
+    amount_of_segments = len(segments[agent])
+    for i in range(cut+1, amount_of_segments):
+        last_agent_constant_value += segments[agent][i]['area']
+    last_agent_variable_value = segments[agent][cut]['value']
+    if ((0 <= y) and (y <= cut_range)):
+        value =  last_agent_constant_value + (cut_range - y) * last_agent_variable_value
+        return value
+    else:
+        return "Input out of bounds"
+    
+
+def constraints_three_agents(segments, agents, cuts, params):
+    def constraint1(vars, params):
+        cut_one, cut_two = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[2]
+        agents = params[3]
+        cuts = params[4]
+        slice_one_first_agent_value = first_slice_value(x, segments, agents[0], cuts[0])
+        slice_two_first_agent_value = middle_slice_value(x, y, segments, agents[0], cuts[0], cuts[1])
+        return slice_one_first_agent_value - slice_two_first_agent_value
+
+    def constraint2(vars, params):
+        cut_one, cut_two = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[2]
+        agents = params[3]
+        cuts = params[4]
+        slice_one_first_agent_value = first_slice_value(x, segments, agents[0], cuts[0])
+        slice_three_first_agent_value = last_slice_value(y, segments, agents[0], cuts[1])
+        return slice_one_first_agent_value - slice_three_first_agent_value
+
+    def constraint3(vars, params):
+        cut_one, cut_two = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[2]
+        agents = params[3]
+        cuts = params[4]
+        slice_two_second_agent_value = middle_slice_value(x, y, segments, agents[1], cuts[0], cuts[1])
+        slice_one_second_agent_value = first_slice_value(x, segments, agents[1], cuts[0])
+        return slice_two_second_agent_value - slice_one_second_agent_value
+
+    def constraint4(vars, params):
+        cut_one, cut_two = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[2]
+        agents = params[3]
+        cuts = params[4]
+        slice_two_second_agent_value = middle_slice_value(x, y, segments, agents[1], cuts[0], cuts[1])
+        slice_three_second_agent_value = last_slice_value(y, segments, agents[1], cuts[1])
+        return slice_two_second_agent_value - slice_three_second_agent_value
+
+    def constraint5(vars, params):
+        cut_one, cut_two = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[2]
+        agents = params[3]
+
+        cuts = params[4]
+        slice_three_third_agent_value = last_slice_value(y, segments, agents[2], cuts[1])
+        slice_one_third_agent_value = first_slice_value(x, segments, agents[2], cuts[0])
+        return slice_three_third_agent_value - slice_one_third_agent_value
+
+    def constraint6(vars, params):
+        cut_one, cut_two = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[2]
+        agents = params[3]
+        cuts = params[4]
+        slice_three_third_agent_value = last_slice_value(y, segments, agents[2], cuts[1])
+        slice_two_third_agent_value = middle_slice_value(x, y, segments, agents[2], cuts[0], cuts[1])
+        return slice_three_third_agent_value - slice_two_third_agent_value
+
+    def constraint7(vars, params):
+        cut_one, cut_two = vars
+        return cut_two - cut_one
+
+    cons = [{'type': 'ineq', 'fun': constraint1, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint2, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint3, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint4, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint5, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint6, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint7, 'args': (params,)}]
+
+    return cons
+
+
+def constraints_four_agents(segments, agents, cuts, params):
+    def constraint1(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_one_first_agent_value = first_slice_value(x, segments, agents[0], cuts[0])
+        slice_two_first_agent_value = middle_slice_value(x, y, segments, agents[0], cuts[0], cuts[1])
+        return slice_one_first_agent_value - slice_two_first_agent_value
+            
+
+    def constraint2(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_one_first_agent_value = first_slice_value(x, segments, agents[0], cuts[0])
+        slice_three_first_agent_value = middle_slice_value(y, z, segments, agents[0], cuts[1], cuts[2])
+        return slice_one_first_agent_value - slice_three_first_agent_value
+
+    def constraint3(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_one_first_agent_value = first_slice_value(x, segments, agents[0], cuts[0])
+        slice_four_first_agent_value = last_slice_value(z, segments, agents[0], cuts[2])
+        return slice_one_first_agent_value - slice_four_first_agent_value
+
+    def constraint4(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_two_second_agent_value =  middle_slice_value(x, y, segments, agents[1], cuts[0], cuts[1])
+        slice_one_second_agent_value = first_slice_value(x, segments, agents[1], cuts[0])
+        return slice_two_second_agent_value - slice_one_second_agent_value
+
+    def constraint5(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_two_second_agent_value =  middle_slice_value(x, y, segments, agents[1], cuts[0], cuts[1])
+        slice_three_second_agent_value = middle_slice_value(y, z, segments, agents[1], cuts[1], cuts[2])
+        return slice_two_second_agent_value - slice_three_second_agent_value
+
+    def constraint6(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_two_second_agent_value =  middle_slice_value(x, y, segments, agents[1], cuts[0], cuts[1])
+        slice_four_second_agent_value = last_slice_value(z, segments, agents[1], cuts[2])
+        return slice_two_second_agent_value - slice_four_second_agent_value
+
+    def constraint7(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_three_third_agent_value = middle_slice_value(y, z, segments, agents[2], cuts[1], cuts[2])
+        slice_one_third_agent_value = first_slice_value(x, segments, agents[2], cuts[0])
+        return slice_three_third_agent_value - slice_one_third_agent_value
+
+    def constraint8(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_three_third_agent_value = middle_slice_value(y, z, segments, agents[2], cuts[1], cuts[2])
+        slice_two_third_agent_value = middle_slice_value(x, y, segments, agents[2], cuts[0], cuts[1])
+        return slice_three_third_agent_value - slice_two_third_agent_value
+
+    def constraint9(vars, params):
+        cut_one, cut_two, cut_three = vars
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_three_third_agent_value = middle_slice_value(y, z, segments, agents[2], cuts[1], cuts[2])
+        slice_four_third_agent_value = last_slice_value(z, segments, agents[2], cuts[2])
+        return slice_three_third_agent_value - slice_four_third_agent_value
+
+    def constraint10(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_four_fourth_agent_value = last_slice_value(z, segments, agents[3], cuts[2])
+        slice_one_fourth_agent_value = first_slice_value(x, segments, agents[3], cuts[0])
+        return slice_four_fourth_agent_value - slice_one_fourth_agent_value
+
+    def constraint11(vars, params):
+        cut_one, cut_two, cut_three = vars
+        x = cut_one - params[0]
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_four_fourth_agent_value = last_slice_value(z, segments, agents[3], cuts[2])
+        slice_two_fourth_agent_value = middle_slice_value(x, y, segments, agents[3], cuts[0], cuts[1])
+        return slice_four_fourth_agent_value - slice_two_fourth_agent_value
+
+    def constraint12(vars, params):
+        cut_one, cut_two, cut_three = vars
+        y = cut_two - params[1]
+        z = cut_three - params[2]
+        segments = params[3]
+        agents = params[4]
+        cuts = params[5]
+        slice_four_fourth_agent_value = last_slice_value(z, segments, agents[3], cuts[2])
+        slice_three_fourth_agent_value = middle_slice_value(y, z, segments, agents[3], cuts[1], cuts[2])
+        return slice_four_fourth_agent_value - slice_three_fourth_agent_value
+
+    def constraint13(vars, params):
+        cut_one, cut_two, cut_three = vars
+        return cut_two - cut_one
+
+    def constraint14(vars, params):
+        cut_one, cut_two, cut_three = vars
+        return cut_three - cut_one
+
+    def constraint15(vars, params):
+        cut_one, cut_two, cut_three = vars
+        return cut_three - cut_two
+
+    cons = [{'type': 'ineq', 'fun': constraint1, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint2, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint3, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint4, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint5, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint6, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint7, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint8, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint9, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint10, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint11, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint12, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint13, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint14, 'args': (params,)},
+            {'type': 'ineq', 'fun': constraint15, 'args': (params,)}]
+
+    return cons
+
+
+def find_division_three_agents(segments, agents, cuts):
+    cut_one_lower_bound = segments[0][cuts[0]]['start']
+    cut_one_upper_bound = segments[0][cuts[0]]['end']
+    cut_two_lower_bound = segments[0][cuts[1]]['start']
+    cut_two_upper_bound = segments[0][cuts[1]]['end']
+
+    params = [cut_one_lower_bound, cut_two_lower_bound, segments, agents, cuts]
+    cons = constraints_three_agents(segments, agents, cuts, params)
+    initial_guess = [cut_one_lower_bound, cut_two_lower_bound]
+    cut_bounds = [(cut_one_lower_bound, cut_one_upper_bound), (cut_two_lower_bound, cut_two_upper_bound)]
+
+    def objective(vars, *args):
+        return 0
+
+    result = minimize(objective, initial_guess, args=(params,), constraints=cons, bounds= cut_bounds)
+
+    if result.success:
+        return {'envy_free_check':True, 'cuts': result.x}
+    else:
+        return {'envy_free_check':False, 'cuts': None}
+    
+
+def find_division_four_agents(segments, agents, cuts):
+    cut_one_lower_bound = segments[0][cuts[0]]['start']
+    cut_one_upper_bound = segments[0][cuts[0]]['end']
+    cut_two_lower_bound = segments[0][cuts[1]]['start']
+    cut_two_upper_bound = segments[0][cuts[1]]['end']
+    cut_three_lower_bound = segments[0][cuts[2]]['start']
+    cut_three_upper_bound = segments[0][cuts[2]]['end']
+    
+    params = [cut_one_lower_bound, cut_two_lower_bound, cut_three_lower_bound, segments, agents, cuts]
+    cons = constraints_four_agents(segments, agents, cuts, params)
+    initial_guess = [cut_one_lower_bound, cut_two_lower_bound, cut_three_lower_bound]
+    cut_bounds = [(cut_one_lower_bound, cut_one_upper_bound), (cut_two_lower_bound, cut_two_upper_bound),
+                  (cut_three_lower_bound, cut_three_upper_bound)]
+
+    def objective(vars, *args):
+        return 0
+
+    result = minimize(objective, initial_guess, args=(params,), constraints=cons, bounds= cut_bounds)
+
+    if result.success:
+        return {'envy_free_check':True, 'cuts': result.x}
+    else:
+        return {'envy_free_check':False, 'cuts': None}
+    
+
+def find_division(segments, agents, cuts, agents_number):
+    if agents_number == 3:
+        return find_division_three_agents(segments, agents, cuts)
+    if agents_number == 4:
+        return find_division_four_agents(segments, agents, cuts)
+    
+
+def solver(segments, agents_number):
+    amount_of_segments = len(segments[0])
+    cut_positions = []
+    assert (agents_number == 3) or (agents_number == 4),\
+        "Invalid agents number for algorithm"
+    if agents_number == 3:
+        for cut_one in range(amount_of_segments):
+            for cut_two in range(cut_one, amount_of_segments):
+                cut_positions.append([cut_one, cut_two])
+    if agents_number == 4:
+        for cut_one in range(amount_of_segments):
+            for cut_two in range(cut_one, amount_of_segments):
+                for cut_three in range(cut_two, amount_of_segments):
+                    cut_positions.append([cut_one, cut_two, cut_three])
+    agents_list = [i for i in range(agents_number)]
+    agents_permutations = list(itertools.permutations(agents_list))
+    for agents in agents_permutations:
+        for cuts in cut_positions:
+            info = find_division(segments, agents, cuts, agents_number)
+            if info['envy_free_check'] == True:
+                return info['cuts'], agents
+            else:
+                continue
+    return False
+
+def piecewise_algorithm(preferences, cake_size):
+    agents_number = len(preferences)
+    preferences = change_bounds(preferences, cake_size)
+    segments = find_segments(preferences, agents_number)
+    cuts, agents = solver(segments, agents_number)
+    if agents_number == 4:
+        envy_free_division = FourAgentPortion(cuts[0], cuts[1])
+        slice_assignments = {1: agents[0], 2: agents[1], 3: agents[2]}
+        raw_envy_free_division = raw_division(envy_free_division, cake_size, 3)
+    if agents_number == 4:
+        envy_free_division = FourAgentPortion(cuts[0], cuts[1], cuts[2])
+        slice_assignments = {1: agents[0], 2: agents[1], 
+                            3: agents[2], 4: agents[3]}
+        raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
+        return jsonify({'division': raw_envy_free_division,
+                        'assignment': slice_assignments})
+    
+
 @app.route('/api/three_agent_additive', methods=['POST'])
 def three_agent_additive():
     data = request.json
@@ -2193,7 +2670,7 @@ def three_agent():
     # result = branzei_nisan(preferences, cake_size)
     # result_as_dict = [result.left, result.right]
     # return jsonify({'result': result_as_dict})
-    return branzei_nisan(preferences, cake_size)
+    return branzei_nisan_additive(preferences, cake_size)
 
 @app.route('/api/four_agent', methods=['POST'])
 def four_agent():
