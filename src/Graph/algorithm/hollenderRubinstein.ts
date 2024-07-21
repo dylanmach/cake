@@ -106,7 +106,7 @@ Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
       if (condition[0] === 2){
         steps.push(
           makeStep(
-            0,
+            4,
             `The algorithm terminates at the approximately envy-free division at slices ${makePercentage(
               division.left / cakeSize,
               3
