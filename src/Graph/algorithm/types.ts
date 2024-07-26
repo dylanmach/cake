@@ -1,6 +1,6 @@
 import { Portion, Slice } from "../../types";
 
-export type AlgoName = 'cutAndChoose' | 'selfridgeConway' | 'branzeiNisan' | 'hollenderRubinstein';
+export type AlgoName = 'cutAndChoose' | 'selfridgeConway' | 'branzeiNisan' | 'hollenderRubinstein' | 'piecewiseConstant';
 
 export interface Algorithm {
   key: AlgoName
@@ -68,6 +68,17 @@ export const Algorithms: Record<AlgoName, Algorithm> = {
     maxAgents: 4,
     shortDescription:
       'A method for approximate envy-free division between three people. Maximum of two cuts.',
+    link: '/TBD',
+  },
+  piecewiseConstant: {
+    key: 'piecewiseConstant',
+    name: 'Piecewise-Constant',
+    numAgentsText: '3 or 4 people',
+    minAgents: 3,
+    maxAgents: 4,
+    shortDescription:
+      'A method for approximate envy-free division between three or four people with \
+      piecewise-constant valuations.',
     link: '/TBD',
   },
 }
