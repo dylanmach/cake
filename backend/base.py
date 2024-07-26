@@ -2567,9 +2567,9 @@ def find_division_three_agents(segments, agents, cuts):
     result = minimize(objective, initial_guess, args=(params,), constraints=cons, bounds= cut_bounds)
 
     if result.success:
-        return {'envy_free_check':True, 'cuts': result.x}
+        return {'envy_free_check':True, 'exact_cuts': result.x}
     else:
-        return {'envy_free_check':False, 'cuts': None}
+        return {'envy_free_check':False, 'exact_cuts': None}
     
 
 def find_division_four_agents(segments, agents, cuts):
@@ -2592,9 +2592,9 @@ def find_division_four_agents(segments, agents, cuts):
     result = minimize(objective, initial_guess, args=(params,), constraints=cons, bounds= cut_bounds)
 
     if result.success:
-        return {'envy_free_check':True, 'cuts': result.x}
+        return {'envy_free_check':True, 'exact_cuts': result.x}
     else:
-        return {'envy_free_check':False, 'cuts': None}
+        return {'envy_free_check':False, 'exact_cuts': None}
     
 
 def find_division(segments, agents, cuts, agents_number):
@@ -2624,27 +2624,30 @@ def solver(segments, agents_number):
         for cuts in cut_positions:
             info = find_division(segments, agents, cuts, agents_number)
             if info['envy_free_check'] == True:
-                return info['cuts'], agents
+                return cuts, info['exact_cuts'], agents
             else:
                 continue
     return False
 
-def piecewise_algorithm(preferences, cake_size):
+def piecewise_constant_algorithm(preferences, cake_size):
     agents_number = len(preferences)
     preferences = change_bounds(preferences, cake_size)
     segments = find_segments(preferences, agents_number)
-    cuts, agents = solver(segments, agents_number)
+    cut_positions, exact_cuts, agents = solver(segments, agents_number)
     if agents_number == 4:
-        envy_free_division = FourAgentPortion(cuts[0], cuts[1])
+        envy_free_division = FourAgentPortion(exact_cuts[0], exact_cuts[1])
         slice_assignments = {1: agents[0], 2: agents[1], 3: agents[2]}
         raw_envy_free_division = raw_division(envy_free_division, cake_size, 3)
     if agents_number == 4:
-        envy_free_division = FourAgentPortion(cuts[0], cuts[1], cuts[2])
+        envy_free_division = FourAgentPortion(exact_cuts[0], exact_cuts[1], exact_cuts[2])
         slice_assignments = {1: agents[0], 2: agents[1], 
                             3: agents[2], 4: agents[3]}
         raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
-        return jsonify({'division': raw_envy_free_division,
-                        'assignment': slice_assignments})
+        return jsonify({'segments': segments,
+                        'cut_positions': cut_positions,
+                        'division': raw_envy_free_division,
+                        'assignment': slice_assignments,
+                        'agents_number': agents_number})
     
 
 @app.route('/api/three_agent_additive', methods=['POST'])
@@ -2686,6 +2689,22 @@ def four_agent():
     # return jsonify({'division': division,
     #                 'assignment': assignment})
     return hollender_rubinstein(preferences, cake_size)
+
+
+@app.route('/api/piecewise_constant', methods=['POST'])
+def four_agent():
+    data = request.json
+    preferences = data.get('preferences')
+    cake_size = data.get('cakeSize')
+    
+    # Call your algorithm function with preferences and cake_size
+    #result = hollender_rubinstein(preferences, cake_size)
+    #result_as_dict = [result.left, result.middle, result.right]
+    #return jsonify({'result': result_as_dict})
+    # division, assignment = hollender_rubinstein(preferences, cake_size)
+    # return jsonify({'division': division,
+    #                 'assignment': assignment})
+    return piecewise_constant_algorithm(preferences, cake_size)
 
 
 class Bounds:
