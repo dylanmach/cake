@@ -71,8 +71,8 @@ Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
       if (condition[0] === 1){
         steps.push(
           makeStep(
-            0,
-            `The algorithm terminates at the approximately envy-free division at slices ${makePercentage(
+            4,
+            `terminates at the approximately envy-free division at slices ${makePercentage(
               division.left / cakeSize,
               3
             )}, ${makePercentage(division.middle / cakeSize, 3)}, and 
@@ -107,7 +107,7 @@ Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
         steps.push(
           makeStep(
             4,
-            `The algorithm terminates at the approximately envy-free division at slices ${makePercentage(
+            `terminates at the approximately envy-free division at slices ${makePercentage(
               division.left / cakeSize,
               3
             )}, ${makePercentage(division.middle / cakeSize, 3)}, and 

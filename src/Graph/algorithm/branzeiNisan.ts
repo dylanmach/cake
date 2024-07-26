@@ -43,8 +43,8 @@ Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
 
     steps.push(
       makeStep(
-        0,
-        `The algorithm terminates at the approximately envy-free division at slices ${makePercentage(
+        4,
+        `terminates at the approximately envy-free division at slices ${makePercentage(
           division.left / cakeSize,
           3
         )} and ${makePercentage(division.right / cakeSize, 3)}`,
