@@ -2222,8 +2222,11 @@ def find_segments_intervals(prefs):
     breakpoints = set()
     for agents in prefs:
         for segments in agents:
-            breakpoints.add(segments['start'])
-            breakpoints.add(segments['end'])
+            assert (segments['startValue'] == segments['endValue']), \
+                'Valuations must be piecewise-constant for this algorithm.'
+            if segments['startValue'] > 0:
+                breakpoints.add(segments['start'])
+                breakpoints.add(segments['end'])
 
     # Convert breakpoints to a sorted list
     sorted_breakpoints = sorted(breakpoints)
@@ -2238,19 +2241,40 @@ def find_segments_intervals(prefs):
     return segment_intervals
 
 
+def remove_zeros_from_segments(segmented_prefs, agents_number):
+    amount_of_segments = len(segmented_prefs[0])
+    segments_to_remove = []
+    for i in range(amount_of_segments):
+        zero_values = 0
+        for j in range(agents_number):
+            if segmented_prefs[j][i]['value'] == 0:
+                zero_values += 1
+                if zero_values == agents_number:
+                    segments_to_remove.append(i)
+    sorted_segments_to_remove = sorted(segments_to_remove, reverse=True)
+    for i in sorted_segments_to_remove:
+        for j in range(agents_number):
+            del segmented_prefs[j][i]
+    return segmented_prefs
+
+
+
 def find_segments(prefs, agents_number):
     segments_intervals = find_segments_intervals(prefs)
     segmented_prefs = [[] for _ in range(agents_number)]
     for i in range(agents_number):
-        for segments in prefs[i]:
-            for intervals in segments_intervals:
+        for intervals in segments_intervals:
+            for segments in prefs[i]:
                 if (((segments['start'] >= intervals['start']) and (segments['start'] < intervals['end'])) or \
-                    ((segments['end'] > intervals['start']) and (segments['end'] <= intervals['end']))):
+                    ((segments['end'] > intervals['start']) and (segments['end'] <= intervals['end'])) or \
+                    ((segments['start'] <= intervals['start']) and (segments['end'] >= intervals['end']))):
                     segmented_prefs[i].append({'start': intervals['start'],
                                                'end': intervals['end'],
                                                'value': segments['startValue'],
                                                'area': (intervals['end'] - intervals['start']) * segments['startValue']})
-    return segmented_prefs
+                    break
+    segmented_prefs_without_zeros = remove_zeros_from_segments(segmented_prefs, agents_number)
+    return segmented_prefs_without_zeros
 
 
 def first_slice_value(x, segments, agent, cut):
