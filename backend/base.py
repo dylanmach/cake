@@ -2195,8 +2195,9 @@ def branzei_nisan_additive(raw_prefs, cakeSize):
     if check_unique_preferences_additive(prefs, equipartition, epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 3, epsilon, additive = True)
         raw_envy_free_division = raw_division(equipartition, cakeSize, 3)
-        return jsonify({'division': raw_envy_free_division,
+        return jsonify({'equipartition': raw_envy_free_division,
                         'assignment': slice_assignments,
+                        'chosen_agent': chosen_agent,
                         'condition': 0})
     if middle_preferred_check(prefs, equipartition, chosen_agent, epsilon) == True:
         envy_free_division = middle_preferred_case(prefs, equipartition, chosen_agent, epsilon)
@@ -2210,6 +2211,7 @@ def branzei_nisan_additive(raw_prefs, cakeSize):
     return jsonify({'equipartition': raw_equipartition,
                     'division': raw_envy_free_division,
                     'assignment': slice_assignments,
+                    'chosen_agent': chosen_agent,
                     'condition': 1,
                     'specifics': specifics})
 
@@ -2631,11 +2633,12 @@ def solver(segments, agents_number):
 
 def piecewise_constant_algorithm(preferences, cake_size):
     agents_number = len(preferences)
+    raw_segments = find_segments(preferences, agents_number)
     preferences = change_bounds(preferences, cake_size)
     segments = find_segments(preferences, agents_number)
     cut_positions, exact_cuts, agents = solver(segments, agents_number)
-    if agents_number == 4:
-        envy_free_division = FourAgentPortion(exact_cuts[0], exact_cuts[1])
+    if agents_number == 3:
+        envy_free_division = ThreeAgentPortion(exact_cuts[0], exact_cuts[1])
         slice_assignments = {1: agents[0], 2: agents[1], 3: agents[2]}
         raw_envy_free_division = raw_division(envy_free_division, cake_size, 3)
     if agents_number == 4:
@@ -2643,11 +2646,12 @@ def piecewise_constant_algorithm(preferences, cake_size):
         slice_assignments = {1: agents[0], 2: agents[1], 
                             3: agents[2], 4: agents[3]}
         raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
-        return jsonify({'segments': segments,
-                        'cut_positions': cut_positions,
-                        'division': raw_envy_free_division,
-                        'assignment': slice_assignments,
-                        'agents_number': agents_number})
+    
+    return jsonify({'segments': raw_segments,
+                    'cut_positions': cut_positions,
+                    'division': raw_envy_free_division,
+                    'assignment': slice_assignments,
+                    'agents_number': agents_number})
     
 
 @app.route('/api/three_agent_additive', methods=['POST'])
@@ -2692,7 +2696,7 @@ def four_agent():
 
 
 @app.route('/api/piecewise_constant', methods=['POST'])
-def four_agent():
+def piecewise_constant():
     data = request.json
     preferences = data.get('preferences')
     cake_size = data.get('cakeSize')
