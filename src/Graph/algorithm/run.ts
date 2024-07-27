@@ -6,6 +6,7 @@ import { selfridgeConway } from './selfridgeConway'
 import { branzeiNisan } from './branzeiNisan'
 import { hollenderRubinstein } from './hollenderRubinstein'
 import { getTotalValue } from './getValue'
+import { piecewiseConstant } from './piecewiseConstant'
 
 export const runDivisionAlgorithm = async (
   preferences: Preferences,
@@ -38,6 +39,9 @@ export const runDivisionAlgorithm = async (
     case 'hollenderRubinstein':
       result = await hollenderRubinstein(preferences, cakeSize)
       break
+      case 'piecewiseConstant':
+        result = await piecewiseConstant(preferences, cakeSize)
+        break
     // NOTE FOR FUTURE DEVS
     // If server-side methods are implemented,
     // be sure to `await` the asynchronous response as shown here:
