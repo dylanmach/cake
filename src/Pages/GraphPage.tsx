@@ -34,7 +34,7 @@ export const GraphPage = (props) => {
         <TextContainer>
           <p>
             The tool works with <strong>divisible resources</strong> like time, cake, or
-            land. Currently, our algorithms support 2-3 participants. In the future we
+            land. Currently, our algorithms support 2-4 participants. In the future we
             plan to introduce new algorithms for indivisible items and for more
             participants.
           </p>
