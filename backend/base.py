@@ -5,6 +5,7 @@ import pandas as pd
 from timeit import default_timer as timer
 import itertools
 from scipy.optimize import minimize
+from scipy.optimize import linear_sum_assignment
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for cross-origin requests
@@ -1841,54 +1842,95 @@ def check_invariant_four_agents(prefs, alpha, epsilon, return_division = False):
     else:
         return False
     
+def check_envy_free_four_agent(prefs, division, epsilon):
+    agent_slice_values = np.zeros((4,4))
+    for i in range(4):
+        agent_slice_values[i] = slice_values(i, prefs, division, 4, epsilon)
+    for h in range(4):
+        for i in range(4):
+            for j in range(4):
+                for k in range(4):
+                    if (k == j) or (k == i) or (j == i) or (h == i) or (h == j) or (h == k):
+                        continue
+                    if  np.isclose(agent_slice_values[0][h], np.max(agent_slice_values[0]), rtol = 0, atol = epsilon) and \
+                        np.isclose(agent_slice_values[1][i], np.max(agent_slice_values[1]), rtol = 0, atol = epsilon) and \
+                        np.isclose(agent_slice_values[2][j], np.max(agent_slice_values[2]), rtol = 0, atol = epsilon) and \
+                        np.isclose(agent_slice_values[3][k], np.max(agent_slice_values[3]), rtol = 0, atol = epsilon):
+                            return True
+    return False
+    
+# def assign_slices(division, prefs, agents_number, epsilon, additive = False):
+#     if agents_number == 3:
+#         agents = [0,1,2]
+#         slices = [1,2,3]
+#     if  agents_number == 4:
+#         agents = [0,1,2,3]
+#         slices = [1,2,3,4]
+#     agent_slice_values = np.zeros((len(agents),len(slices)))
+#     for i in range(agents_number):
+#         if additive == False:
+#             agent_slice_values[i] = slice_values(i, prefs, division, agents_number, epsilon)
+#         else:
+#             agent_slice_values[i] = slice_values_additive(i, prefs, division, epsilon)
+#     assignments = {}  # To store the assignments of slices to agents
+
+#     while len(agents) > 1:
+#         max_difference = -1
+#         chosen_agent = None
+#         chosen_slice = None
+
+#         # Find the agent with the maximum difference between their top two best slices
+#         for agent in agents:
+#             # Sort the agent's valuations and get the indices of the top two values
+#             valuations = pd.DataFrame({"slices": slices,
+#                                        "values": agent_slice_values[agent]})
+#             sorted_valuations = valuations.sort_values(by ='values' , ascending=False).reset_index(drop=True)
+#             top_value = sorted_valuations["values"][0]
+#             second_value = sorted_valuations["values"][1]
+#             difference = top_value - second_value
+#             #value_for_print = sorted_valuations["slices"][0]
+
+#             if difference > max_difference:
+#                 max_difference = difference
+#                 chosen_agent = agent
+#                 chosen_slice = sorted_valuations["slices"][0]
+
+#         # Assign the chosen slice to the chosen agent
+#         assignments[int(chosen_slice)] = chosen_agent
+
+#         # Remove the chosen agent and slice
+#         agents.remove(chosen_agent)
+#         slice_index = slices.index(chosen_slice)
+#         slices.remove(chosen_slice)
+#         agent_slice_values = [np.concatenate([val[:slice_index], val[slice_index+1:]]) for val in agent_slice_values]
+
+#     # Assign the remaining slice to the remaining agent
+#     assignments[int(slices[0])] = agents[0]
+
+#     return assignments
+
 def assign_slices(division, prefs, agents_number, epsilon, additive = False):
-    if agents_number == 3:
-        agents = [0,1,2]
-        slices = [1,2,3]
-    if  agents_number == 4:
-        agents = [0,1,2,3]
-        slices = [1,2,3,4]
-    agent_slice_values = np.zeros((len(agents),len(slices)))
+    '''
+    Makes a cost matrix where the cost of an agent being assigned a slice is the difference
+    between the slice value and the value of their favourite slice. If a slice's value is more
+    than epsilon below the agents favourite slice, the cost is set to 10000 for that agent. 
+    This cost matrix is then passed into a cost minimization function that assigns the slices.
+    '''
+    agent_slice_values = np.zeros((agents_number, agents_number))
     for i in range(agents_number):
         if additive == False:
             agent_slice_values[i] = slice_values(i, prefs, division, agents_number, epsilon)
         else:
             agent_slice_values[i] = slice_values_additive(i, prefs, division, epsilon)
+
+    max_slice_values = np.max(agent_slice_values, axis = 1)
+    max_slice_values_matrix = np.tile(max_slice_values, [agents_number,1]).T
+    cost_matrix = max_slice_values_matrix - agent_slice_values
+    cost_matrix[cost_matrix>epsilon] = 10000
+    _, slice_assignments = linear_sum_assignment(cost_matrix)
     assignments = {}  # To store the assignments of slices to agents
-
-    while len(agents) > 1:
-        max_difference = -1
-        chosen_agent = None
-        chosen_slice = None
-
-        # Find the agent with the maximum difference between their top two best slices
-        for agent in agents:
-            # Sort the agent's valuations and get the indices of the top two values
-            valuations = pd.DataFrame({"slices": slices,
-                                       "values": agent_slice_values[agent]})
-            sorted_valuations = valuations.sort_values(by ='values' , ascending=False).reset_index(drop=True)
-            top_value = sorted_valuations["values"][0]
-            second_value = sorted_valuations["values"][1]
-            difference = top_value - second_value
-            #value_for_print = sorted_valuations["slices"][0]
-
-            if difference > max_difference:
-                max_difference = difference
-                chosen_agent = agent
-                chosen_slice = sorted_valuations["slices"][0]
-
-        # Assign the chosen slice to the chosen agent
-        assignments[int(chosen_slice)] = chosen_agent
-
-        # Remove the chosen agent and slice
-        agents.remove(chosen_agent)
-        slice_index = slices.index(chosen_slice)
-        slices.remove(chosen_slice)
-        agent_slice_values = [np.concatenate([val[:slice_index], val[slice_index+1:]]) for val in agent_slice_values]
-
-    # Assign the remaining slice to the remaining agent
-    assignments[int(slices[0])] = agents[0]
-
+    for j in range(1,agents_number+1):
+        assignments[j] = int(np.where(slice_assignments==(j-1))[0][0])
     return assignments
 
 def raw_division(division, cakeSize, agents_number):
@@ -1956,6 +1998,7 @@ def hollender_rubinstein(raw_prefs, cake_size):
     x = 1
     envy_free_division, info = check_invariant_four_agents(prefs, alpha_bounds.lower, 
                                                            epsilon, return_division = True)
+    app.logger.debug(check_envy_free_four_agent(prefs, envy_free_division, epsilon))
     raw_equipartition = raw_division(equipartition, cake_size, 4)
     slice_assignments = assign_slices(envy_free_division, prefs, 4, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
