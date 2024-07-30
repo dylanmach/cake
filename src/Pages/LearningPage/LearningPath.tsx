@@ -8,7 +8,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { GraphContext } from '../../Graph/GraphContext'
 import { ResultsSteps } from '../../Graph/components/ResultsView/ResultsSteps'
 import { createScales } from '../../Graph/graphUtils'
-import { sample3PersonResults, sampleLabels3Flavor } from '../../Graph/sampleData'
+import { sample3PersonResults, sampleLabels3Flavor, sampleBranzeiNisanResults} from '../../Graph/sampleData'
 import { InteractionContainer } from '../../Layouts'
 import { ButtonLink, Link } from '../../components/Link'
 import akiThinking from '../../images/aki thinking.png'
@@ -18,6 +18,10 @@ import cake3PrefBruno from '../../images/selfridge/bruno.png'
 import cake3PrefChloe from '../../images/selfridge/chloe.png'
 import selfridgeResults from '../../images/selfridge/selfridge results.png'
 import simple3Results from '../../images/selfridge/simple results.png'
+import branzeiNisanPrefAki from '../../images/branzeiNisan/aki2.png'
+import branzeiNisanPrefBruno from '../../images/branzeiNisan/bruno2.png'
+import branzeiNisanPrefChloe from '../../images/branzeiNisan/chloe2.png'
+import branzeiNisanResults from '../../images/branzeiNisan/branzeiNisanResults.png'
 import { CakeFlavor, CakeImage, CharacterImage, ImageContainer } from './Images'
 import { MeasuringStep } from './MeasuringStep'
 import { Info, Action } from './Aside'
@@ -69,7 +73,15 @@ export const LearningPath = () => {
     [EnvyFree, 'Envy Free'],
     [SelfridgeConway, 'The Selfridge-Conway Method'],
     [ThreeWayDivision, '3-Way Division'],
-    [Recap2, 'Final Recap'],
+    [Recap2, 'Part 2 Recap'],
+    [BranzeiNisan, 'The Branzei-Nisan Algorithm'],
+    [ThreeWayDivisionWithBN, '3-Way Division With Branzei-Nisan'],
+    // [Piecewise, 'The Piecewise-Constant Algorithm'],
+    // [ThreeWayDivisionWithPC, '3-Way Division With Piecewise-constant'],
+    // [Recap3, 'Part 3 Recap'],
+    // [HollenderRubinstein, 'The Hollender-Rubinstein Algorithm'],
+    // [FourWayDivision, '4-Way Division'],
+    // [Recap4, 'Part 4 Recap'],
     [Ending, 'End'],
   ]
   const [CurrentStep] = steps[stepNum]
@@ -537,6 +549,36 @@ const threePreferences = (
   </Box>
 )
 
+const branzeiNisanPreferences = (
+  <Box
+    marginX="auto"
+    marginBottom={8}
+    display="grid"
+    justifyItems="center"
+    alignItems="center"
+    gridTemplateColumns={{ xs: 'auto', md: 'auto auto' }}
+    sx={{ gridRowGap: { xs: '40px', md: '16px' }, gridColumnGap: '16px' }}
+  >
+    <img src={branzeiNisanPrefAki} style={{ maxHeight: 200 }} alt="" />
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Aki" hideName />
+      Aki likes both vanilla and chocolate
+    </Stack>
+
+    <img src={branzeiNisanPrefBruno} style={{ maxHeight: 200 }} alt=""/>
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Bruno" hideName />
+      Bruno prefers vanilla
+    </Stack>
+
+    <img src={branzeiNisanPrefChloe} style={{ maxHeight: 200 }} alt=""/>
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Chloe" hideName />
+      Chloe prefers chocolate
+    </Stack>
+  </Box>
+)
+
 const OverlayText = ({ character, children, ...props }) => (
   <Stack alignItems="center" fontSize={16} {...props}>
     <CharacterImage character={character} hideName width={60} />
@@ -840,6 +882,167 @@ const ThreeWayDivision = () => {
     </>
   )
 }
+const Recap2 = () => {
+  return (
+    <>
+      <h2>Part 2 Recap</h2>
+      <p>Let's review</p>
+      <dl>
+        <dt>Envy-free </dt>
+        <dd>
+          A definition of fairness. In an envy-free solution, no one envies another's
+          portion.{' '}
+        </dd>
+
+        <dt>Selfridge-Conway Method</dt>
+        <dd>A 3-person, envy-free method for fair division.</dd>
+      </dl>
+    </>
+  )
+}
+const BranzeiNisan = () => {
+  return (
+    <>
+      <h2>The Brânzei-Nisan Algorithm</h2>
+      <p>
+        In 2021, <em>Simina Brânzei</em> and <em>Noam Nisan</em> developed an algorithm
+        that applies a method discovered by <em>Julius B. Barbanel</em> and  
+        <em>Steven J. Brams</em> in 2004 that divides a resource between 3 people 
+        in a way that is not only {' '} <strong>guaranteed to be envy-free</strong> {' '}
+        but with only {' '} <strong>two cuts</strong>.
+      </p>
+
+      <p>
+        The steps are more complex than Selfridge-Conway, you can read them below if you are
+        curious.
+      </p>
+
+      <p>
+        The idea is to first have all agents return a division that they believe would split
+        the cake into 3 equal pieces and the agent who's division involves the smallest piece 3 
+        is chosen.
+      </p>
+
+      <p>
+        If this agent's division for 3 equal pieces is envy-free, the algorithm stops and 
+        the division is returned. If not, we move on to part 2.
+      </p>
+
+      <p>
+        In the case where the division is not envy-free, the two remaining agents must both 
+        prefer either piece 1 or piece 2.  {' '} <strong>Remember, they cannot prefer piece 3 as their
+        division into 3 equal pieces had a larger piece 3 than the chosen agent.</strong> {' '}
+      </p>
+
+      <p>
+        The piece that both remaining agents prefer is reduced in size with the other two
+        slices increasing in size with the chosen agent remaining indifferent between them.
+        Eventually, the piece will be too small for both agents to prefer. When this point
+        is reached, the final division must be envy-free.
+      </p>
+
+      <p>Let's try it out!</p>
+
+      <p></p>
+    </>
+  )
+}
+const ThreeWayDivisionWithBN = () => {
+  return (
+    <>
+      <h2>Division with the Brânzei-Nisan Algorithm</h2>
+      <p>Let's see how to create an envy-free outcome.</p>
+      <p>Here is the problem again:</p>
+
+      {branzeiNisanPreferences}
+
+      <Box component="p" marginY={6}>
+        The cake is split using the Brânzei-Nisan Algorithm.
+      </Box>
+
+      <GraphContext.Provider
+        value={{
+          ...createScales({
+            innerWidth: 300,
+            innerHeight: 80,
+            cakeSize: 2,
+          }),
+          width: 300,
+          height: 80,
+          labels: sampleLabels3Flavor,
+          cakeSize: 2,
+          names: ['Aki', 'Bruno', 'Chloe',null, 'The Algorithm'],
+          namesPossessive: ["Aki's", "Bruno's", "Chloe's"],
+        }}
+      >
+        {/* 
+          Probably better to actually run the algo than use saved results.
+          If we change the phrasing in the steps, this will be stale.
+        */}
+        <ResultsSteps algoUsed="branzeiNisan" result={sampleBranzeiNisanResults} />
+      </GraphContext.Provider>
+
+      <Box component="p" marginY={6}>
+        {' '}
+      </Box>
+
+      <Box position="relative" width="fit-content" marginX="auto">
+        <Box
+          component="img"
+          src={branzeiNisanResults}
+          //add alt text
+          alt=""
+          maxHeight={500}
+        />
+
+        <Box
+          position={{ xs: 'relative', sm: 'absolute' }}
+          display="grid"
+          top={0}
+          left={0}
+          height="100%"
+          width="100%"
+          paddingX="10px"
+          paddingY="30px"
+          sx={{
+            gridTemplateColumns: 'repeat(3,1fr)',
+            gridTemplateRows: 'repeat(3,1fr)',
+            gridTemplateAreas: `
+              "a1 a2 ." 
+              "b . ." 
+              "c1 . c2"`,
+            gridRowGap: '12px',
+          }}
+          textAlign="center"
+        >
+          <OverlayText justifySelf="center" character="Aki" gridArea="a2">
+            Aki gets this piece
+          </OverlayText>
+          <OverlayText justifySelf="flex-start" character="Bruno" gridArea="b">
+            Bruno gets this piece
+          </OverlayText>
+          <OverlayText justifySelf="flex-end" character="Chloe" gridArea="c2">
+            Chloe gets this piece
+          </OverlayText>
+        </Box>
+      </Box>
+
+      <p>
+        This solution is{' '}
+        <strong>both proportional, envy-free, and with minimum cuts!</strong>
+      </p>
+
+      <Info>
+        For an explanation as to why this is guaranteed to be envy-free, see{' '}
+        <Link href={'https://www.semanticscholar.org/reader/b59603dbcb2c407249577055be55ae59df6c7249'}>
+          the research paper by Brânzei and Nisan.
+        </Link>
+      </Info>
+
+      {/* <p>Could there be an even better solution?</p> */}
+    </>
+  )
+}
 
 // Removing this part as it confuses people and the example can no longer be Pareto-Optimized
 // const ParetoOptimal = () => {
@@ -873,25 +1076,6 @@ const ThreeWayDivision = () => {
 //     </>
 //   )
 // }
-
-const Recap2 = () => {
-  return (
-    <>
-      <h2>Part 2 Recap</h2>
-      <p>Let's review</p>
-      <dl>
-        <dt>Envy-free </dt>
-        <dd>
-          A definition of fairness. In an envy-free solution, no one envies another's
-          portion.{' '}
-        </dd>
-
-        <dt>Selfridge-Conway Method</dt>
-        <dd>A 3-person, envy-free method for fair division.</dd>
-      </dl>
-    </>
-  )
-}
 
 const Ending = () => {
   return (
