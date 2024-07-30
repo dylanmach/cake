@@ -8,7 +8,8 @@ import { useLocation, useParams } from 'react-router-dom'
 import { GraphContext } from '../../Graph/GraphContext'
 import { ResultsSteps } from '../../Graph/components/ResultsView/ResultsSteps'
 import { createScales } from '../../Graph/graphUtils'
-import { sample3PersonResults, sampleLabels3Flavor, sampleBranzeiNisanResults} from '../../Graph/sampleData'
+import { sample3PersonResults, sampleLabels3Flavor, sampleLabelsPiecewiseConstant, 
+         sampleBranzeiNisanResults, samplePiecewiseConstantResults} from '../../Graph/sampleData'
 import { InteractionContainer } from '../../Layouts'
 import { ButtonLink, Link } from '../../components/Link'
 import akiThinking from '../../images/aki thinking.png'
@@ -22,6 +23,10 @@ import branzeiNisanPrefAki from '../../images/branzeiNisan/aki2.png'
 import branzeiNisanPrefBruno from '../../images/branzeiNisan/bruno2.png'
 import branzeiNisanPrefChloe from '../../images/branzeiNisan/chloe2.png'
 import branzeiNisanResults from '../../images/branzeiNisan/branzeiNisanResults.png'
+import piecewiseConstantPrefAki from '../../images/piecewiseConstant/aki3.png'
+import piecewiseConstantPrefBruno from '../../images/piecewiseConstant/bruno3.png'
+import piecewiseConstantPrefChloe from '../../images/piecewiseConstant/chloe3.png'
+import piecewiseConstantResults from '../../images/piecewiseConstant/piecewiseConstantResults.png'
 import { CakeFlavor, CakeImage, CharacterImage, ImageContainer } from './Images'
 import { MeasuringStep } from './MeasuringStep'
 import { Info, Action } from './Aside'
@@ -76,8 +81,8 @@ export const LearningPath = () => {
     [Recap2, 'Part 2 Recap'],
     [BranzeiNisan, 'The Branzei-Nisan Algorithm'],
     [ThreeWayDivisionWithBN, '3-Way Division With Branzei-Nisan'],
-    // [Piecewise, 'The Piecewise-Constant Algorithm'],
-    // [ThreeWayDivisionWithPC, '3-Way Division With Piecewise-constant'],
+    [Piecewise, 'The Piecewise-Constant Algorithm'],
+    [ThreeWayDivisionWithPC, '3-Way Division With Piecewise-constant'],
     // [Recap3, 'Part 3 Recap'],
     // [HollenderRubinstein, 'The Hollender-Rubinstein Algorithm'],
     // [FourWayDivision, '4-Way Division'],
@@ -579,6 +584,36 @@ const branzeiNisanPreferences = (
   </Box>
 )
 
+const piecewiseConstantPreferences = (
+  <Box
+    marginX="auto"
+    marginBottom={8}
+    display="grid"
+    justifyItems="center"
+    alignItems="center"
+    gridTemplateColumns={{ xs: 'auto', md: 'auto auto' }}
+    sx={{ gridRowGap: { xs: '40px', md: '16px' }, gridColumnGap: '16px' }}
+  >
+    <img src={piecewiseConstantPrefAki} style={{ maxHeight: 200 }} alt="" />
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Aki" hideName />
+      Aki has these preferences
+    </Stack>
+
+    <img src={piecewiseConstantPrefBruno} style={{ maxHeight: 200 }} alt=""/>
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Bruno" hideName />
+      Bruno has these preferences
+    </Stack>
+
+    <img src={piecewiseConstantPrefChloe} style={{ maxHeight: 200 }} alt=""/>
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Chloe" hideName />
+      Chloe has these preferences
+    </Stack>
+  </Box>
+)
+
 const OverlayText = ({ character, children, ...props }) => (
   <Stack alignItems="center" fontSize={16} {...props}>
     <CharacterImage character={character} hideName width={60} />
@@ -1038,6 +1073,157 @@ const ThreeWayDivisionWithBN = () => {
           the research paper by Brânzei and Nisan.
         </Link>
       </Info>
+
+      {/* <p>Could there be an even better solution?</p> */}
+    </>
+  )
+}
+
+const Piecewise = () => {
+  return (
+    <>
+      <h2>The Piecewise-Constant Algorithm</h2>
+      <p>
+        Next we will discuss a new method that can divide a resource 
+        in a way that is {' '} <strong>guaranteed to be envy-free for 
+        any number of agents!</strong>
+      </p>
+
+      <p>
+        One caveat for this algorithm is that it only works for piecewise-constant
+        preferences. That means that each agent's preference for a specific flavour 
+        of the cake must be one value for the whole flavour. i.e. it cannot be 
+        sloped.
+      </p>
+
+      <p>
+        The idea is to split the cake into segments where each agent has a constant 
+        valuation for each segment that is greater than zero.
+      </p>
+
+      <p>
+        The algorithm then inspects each combination of segments to see if the cut positions
+        can be located somewhere in these segments.
+      </p>
+
+      <p>
+        The way this is done is that it adds up the value of all the segments that are not being
+        inspected to find the minimum value of each slice for the agents. The value of the slices
+        for each agent can then be represented as a linear function of the cut positions 
+        (i.e. mx + c where m is the value of the inspected segment, c is the minimum value
+        we've calculated, and x is the proportion of the way through the inspected segment that 
+        the cut lies.)
+      </p>
+
+      <p>
+        Once we have all the linear functions, we can use known methods (learn more {' '}
+        <Link href={'https://en.wikipedia.org/wiki/Linear_programming'}>
+          here
+        </Link>)
+        to solve for an envy-free
+        division if it exists or return that one does not exist if not and then we would move on
+        to another set of segments until we find an envy-free division.
+      </p>
+
+
+      <p>Let's try it out for 3 people!</p>
+
+      <p></p>
+    </>
+  )
+}
+
+const ThreeWayDivisionWithPC = () => {
+  return (
+    <>
+      <h2>Division with the Brânzei-Nisan Algorithm</h2>
+      <p>Let's see how to create an envy-free outcome.</p>
+      <p>Here is the problem again:</p>
+
+      {piecewiseConstantPreferences}
+
+      <Box component="p" marginY={6}>
+        The cake is split using the Brânzei-Nisan Algorithm.
+      </Box>
+
+      <GraphContext.Provider
+        value={{
+          ...createScales({
+            innerWidth: 300,
+            innerHeight: 80,
+            cakeSize: 5,
+          }),
+          width: 300,
+          height: 80,
+          labels: sampleLabelsPiecewiseConstant,
+          cakeSize: 5,
+          names: ['Aki', 'Bruno', 'Chloe',null, 'The Algorithm'],
+          namesPossessive: ["Aki's", "Bruno's", "Chloe's"],
+        }}
+      >
+        {/* 
+          Probably better to actually run the algo than use saved results.
+          If we change the phrasing in the steps, this will be stale.
+        */}
+        <ResultsSteps algoUsed="piecewiseConstant" result={samplePiecewiseConstantResults} />
+      </GraphContext.Provider>
+
+      <Box component="p" marginY={6}>
+        {' '}
+      </Box>
+
+      <Box position="relative" width="fit-content" marginX="auto">
+        <Box
+          component="img"
+          src={piecewiseConstantResults}
+          //add alt text
+          alt=""
+          maxHeight={500}
+        />
+
+        <Box
+          position={{ xs: 'relative', sm: 'absolute' }}
+          display="grid"
+          top={0}
+          left={0}
+          height="100%"
+          width="100%"
+          paddingX="10px"
+          paddingY="30px"
+          sx={{
+            gridTemplateColumns: 'repeat(3,1fr)',
+            gridTemplateRows: 'repeat(3,1fr)',
+            gridTemplateAreas: `
+              "a1 a2 a3" 
+              "b . ." 
+              "c1 . c2"`,
+            gridRowGap: '12px',
+          }}
+          textAlign="center"
+        >
+          <OverlayText justifySelf="flex-start" character="Aki" gridArea="a3">
+            Aki gets this piece
+          </OverlayText>
+          <OverlayText justifySelf="flex-end" character="Bruno" gridArea="b">
+            Bruno gets this piece
+          </OverlayText>
+          <OverlayText justifySelf="flex-end" character="Chloe" gridArea="c2">
+            Chloe gets this piece
+          </OverlayText>
+        </Box>
+      </Box>
+
+      <p>
+        This solution is{' '}
+        <strong>both proportional, envy-free, and with minimum cuts!</strong>
+      </p>
+
+      {/* <Info>
+        For an explanation as to why this is guaranteed to be envy-free, see{' '}
+        <Link href={'https://www.semanticscholar.org/reader/b59603dbcb2c407249577055be55ae59df6c7249'}>
+          the research paper by Brânzei and Nisan.
+        </Link>
+      </Info> */}
 
       {/* <p>Could there be an even better solution?</p> */}
     </>
