@@ -86,6 +86,44 @@ export const samplePrefs2Flavor2People: Preferences = [
   ],
 ]
 
+export const sampleLabelsPiecewiseConstant: SectionLabel[] = [
+  {
+    name: 'Strawberry',
+    start: 0,
+    end: 1,
+    color: '#F2CADF',
+    id: 1,
+  },
+  {
+    name: 'Vanilla',
+    start: 1,
+    end: 2,
+    color: '#F2F1A1',
+    id: 2,
+  },
+  {
+    name: 'Chocolate',
+    start: 2,
+    end: 3,
+    color: '#A57C52',
+    id: 3,
+  },
+  {
+    name: 'Blueberry',
+    start: 3,
+    end: 4,
+    color: '#4307f6',
+    id: 4,
+  },
+  {
+    name: 'Lime',
+    start: 4,
+    end: 5,
+    color: '#53f507',
+    id: 5,
+  },
+]
+
 export const sample3PersonResults: Result = {
   solution: [
     {
@@ -432,6 +470,208 @@ export const sampleBranzeiNisanResults: Result = {
                     2.6875029364038747,
                     1.07500117456155,
                     5.375005872807749
+                ],
+                "id": 3
+            }
+        ],
+        "assign": true
+    }
+]
+}
+
+export const samplePiecewiseConstantResults: Result = {
+  solution: [
+      {
+          "owner": 0,
+          "percentValues": [
+              0.375,
+              0.4791666666666665,
+              0.4166666666666667
+          ],
+          "edges": [
+              [
+                  2.2500000000000004,
+                  4.5
+              ]
+          ]
+      },
+      {
+          "owner": 1,
+          "percentValues": [
+              0.25,
+              0.4791666666666668,
+              0.16666666666666666
+          ],
+          "edges": [
+              [
+                  0,
+                  2.2500000000000004
+              ]
+          ]
+      },
+      {
+          "owner": 2,
+          "percentValues": [
+              0.375,
+              0.041666666666666664,
+              0.4166666666666667
+          ],
+          "edges": [
+              [
+                  4.5,
+                  5
+              ]
+          ]
+      }
+  ],
+    
+  steps: [
+    {
+        "actor": 4,
+        "action": "first divides the resource into segments",
+        "pieces": [
+            {
+                "start": 0,
+                "end": 1,
+                "values": [
+                    2,
+                    10,
+                    2
+                ],
+                "id": 0
+            },
+            {
+                "start": 2,
+                "end": 4,
+                "values": [
+                    0,
+                    12,
+                    0
+                ],
+                "id": 1
+            },
+            {
+                "start": 4,
+                "end": 5,
+                "values": [
+                    6,
+                    2,
+                    10
+                ],
+                "id": 2
+            }
+        ],
+        "assign": false
+    },
+    {
+        "actor": 4,
+        "action": "identifies the segment containing the first cut as 1 and \n                the segment containing the second cut as 2",
+        "pieces": [
+            {
+                "start": 2,
+                "end": 4,
+                "values": [
+                    0,
+                    12,
+                    0
+                ],
+                "id": 1
+            },
+            {
+                "start": 4,
+                "end": 5,
+                "values": [
+                    6,
+                    2,
+                    10
+                ],
+                "id": 2
+            }
+        ],
+        "assign": false
+    },
+    {
+        "actor": 4,
+        "action": "finds an approximately envy-free division at slices 45.0% and 90%",
+        "pieces": [
+            {
+                "start": 0,
+                "end": 2.2500000000000004,
+                "values": [
+                    2,
+                    11.500000000000004,
+                    2
+                ],
+                "id": 1
+            },
+            {
+                "start": 2.2500000000000004,
+                "end": 4.5,
+                "values": [
+                    3,
+                    11.499999999999996,
+                    5
+                ],
+                "id": 2
+            },
+            {
+                "start": 4.5,
+                "end": 5,
+                "values": [
+                    3,
+                    1,
+                    5
+                ],
+                "id": 3
+            }
+        ],
+        "assign": false
+    },
+    {
+        "actor": 1,
+        "action": "is assigned piece 1",
+        "pieces": [
+            {
+                "start": 0,
+                "end": 2.2500000000000004,
+                "values": [
+                    2,
+                    11.500000000000004,
+                    2
+                ],
+                "id": 1
+            }
+        ],
+        "assign": true
+    },
+    {
+        "actor": 0,
+        "action": "is assigned piece 2",
+        "pieces": [
+            {
+                "start": 2.2500000000000004,
+                "end": 4.5,
+                "values": [
+                    3,
+                    11.499999999999996,
+                    5
+                ],
+                "id": 2
+            }
+        ],
+        "assign": true
+    },
+    {
+        "actor": 2,
+        "action": "is assigned piece 3",
+        "pieces": [
+            {
+                "start": 4.5,
+                "end": 5,
+                "values": [
+                    3,
+                    1,
+                    5
                 ],
                 "id": 3
             }
