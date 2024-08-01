@@ -27,7 +27,7 @@ export const PrivacyPolicyPage = () => {
       <h2>Contact Us</h2>
       <p>
         If you have any questions, you can contact us by email at andycernst [at]
-        gmail.com
+        gmail.com or dylan.t.mcgrath [at] gmail.com
       </p>
     </article>
   )
