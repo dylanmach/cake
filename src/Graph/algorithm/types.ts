@@ -58,7 +58,7 @@ export const Algorithms: Record<AlgoName, Algorithm> = {
     maxAgents: 3,
     shortDescription:
       'A method for approximate envy-free division between three people. Maximum of two cuts.',
-    link: '/TBD',
+    link: '/learn/16',
   },
   hollenderRubinstein: {
     key: 'hollenderRubinstein',
@@ -68,7 +68,7 @@ export const Algorithms: Record<AlgoName, Algorithm> = {
     maxAgents: 4,
     shortDescription:
       'A method for approximate envy-free division between three people. Maximum of two cuts.',
-    link: '/TBD',
+    link: '/learn/20',
   },
   piecewiseConstant: {
     key: 'piecewiseConstant',
@@ -79,6 +79,6 @@ export const Algorithms: Record<AlgoName, Algorithm> = {
     shortDescription:
       'A method for approximate envy-free division between three or four people with \
       piecewise-constant valuations.',
-    link: '/TBD',
+    link: '/learn/18',
   },
 }
