@@ -9,7 +9,8 @@ import { GraphContext } from '../../Graph/GraphContext'
 import { ResultsSteps } from '../../Graph/components/ResultsView/ResultsSteps'
 import { createScales } from '../../Graph/graphUtils'
 import { sample3PersonResults, sampleLabels3Flavor, sampleLabelsPiecewiseConstant, 
-         sampleBranzeiNisanResults, samplePiecewiseConstantResults} from '../../Graph/sampleData'
+         sampleBranzeiNisanResults, samplePiecewiseConstantResults,
+         sample4PersonResults} from '../../Graph/sampleData'
 import { InteractionContainer } from '../../Layouts'
 import { ButtonLink, Link } from '../../components/Link'
 import akiThinking from '../../images/aki thinking.png'
@@ -27,6 +28,11 @@ import piecewiseConstantPrefAki from '../../images/piecewiseConstant/aki3.png'
 import piecewiseConstantPrefBruno from '../../images/piecewiseConstant/bruno3.png'
 import piecewiseConstantPrefChloe from '../../images/piecewiseConstant/chloe3.png'
 import piecewiseConstantResults from '../../images/piecewiseConstant/piecewiseConstantResults.png'
+import hollenderRubinsteinPrefAki from '../../images/hollenderRubinstein/aki4.png'
+import hollenderRubinsteinPrefBruno from '../../images/hollenderRubinstein/bruno4.png'
+import hollenderRubinsteinPrefChloe from '../../images/hollenderRubinstein/chloe4.png'
+import hollenderRubinsteinPrefDouglas from '../../images/hollenderRubinstein/douglas4.png'
+import hollenderRubinsteinResults from '../../images/hollenderRubinstein/hollenderRubinsteinResults.png'
 import { CakeFlavor, CakeImage, CharacterImage, ImageContainer } from './Images'
 import { MeasuringStep } from './MeasuringStep'
 import { Info, Action } from './Aside'
@@ -79,13 +85,13 @@ export const LearningPath = () => {
     [SelfridgeConway, 'The Selfridge-Conway Method'],
     [ThreeWayDivision, '3-Way Division'],
     [Recap2, 'Part 2 Recap'],
-    [BranzeiNisan, 'The Branzei-Nisan Algorithm'],
-    [ThreeWayDivisionWithBN, '3-Way Division With Branzei-Nisan'],
+    [BranzeiNisan, 'The Brânzei-Nisan Algorithm'],
+    [ThreeWayDivisionWithBN, '3-Way Division With Brânzei-Nisan'],
     [Piecewise, 'The Piecewise-Constant Algorithm'],
     [ThreeWayDivisionWithPC, '3-Way Division With Piecewise-constant'],
     // [Recap3, 'Part 3 Recap'],
-    // [HollenderRubinstein, 'The Hollender-Rubinstein Algorithm'],
-    // [FourWayDivision, '4-Way Division'],
+    [HollenderRubinstein, 'The Hollender-Rubinstein Algorithm'],
+    [FourWayDivision, '4-Way Division'],
     // [Recap4, 'Part 4 Recap'],
     [Ending, 'End'],
   ]
@@ -623,6 +629,51 @@ const OverlayText = ({ character, children, ...props }) => (
   </Stack>
 )
 
+const OverlayTextDouglas = ({ character, children, ...props }) => (
+  <Stack alignItems="center" fontSize={16} {...props}>
+    <CharacterImage character={character} hideName width={50} />
+    <Box bgcolor={'rgba(255,255,255,0.6)'} border="1px solid black">
+      {children}
+    </Box>
+  </Stack>
+)
+
+const hollenderRubinsteinPreferences = (
+  <Box
+    marginX="auto"
+    marginBottom={8}
+    display="grid"
+    justifyItems="center"
+    alignItems="center"
+    gridTemplateColumns={{ xs: 'auto', md: 'auto auto' }}
+    sx={{ gridRowGap: { xs: '40px', md: '16px' }, gridColumnGap: '16px' }}
+  >
+    <img src={branzeiNisanPrefAki} style={{ maxHeight: 200 }} alt="" />
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Aki" hideName />
+      Aki has these preferences
+    </Stack>
+
+    <img src={branzeiNisanPrefBruno} style={{ maxHeight: 200 }} alt=""/>
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Bruno" hideName />
+      Bruno has these preferences
+    </Stack>
+
+    <img src={branzeiNisanPrefChloe} style={{ maxHeight: 200 }} alt=""/>
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Chloe" hideName />
+      Chloe has these preferences
+    </Stack>
+
+    <img src={branzeiNisanPrefChloe} style={{ maxHeight: 200 }} alt=""/>
+    <Stack alignItems="center" marginBottom={2}>
+      <CharacterImage character="Douglas" hideName width={100}/>
+      Douglas has these preferences
+    </Stack>
+  </Box>
+)
+
 const EnterPlayer3 = () => {
   return (
     <>
@@ -943,8 +994,11 @@ const BranzeiNisan = () => {
         In 2021, <em>Simina Brânzei</em> and <em>Noam Nisan</em> developed an algorithm
         that applies a method discovered by <em>Julius B. Barbanel</em> and  
         <em>Steven J. Brams</em> in 2004 that divides a resource between 3 people 
-        in a way that is not only {' '} <strong>guaranteed to be envy-free</strong> {' '}
-        but with only {' '} <strong>two cuts</strong>.
+        in a way that is not only {' '} <strong>guaranteed to be approximately 
+        envy-free</strong> {' '}
+        but with only {' '} <strong>two cuts</strong> (By "approximately envy free", 
+        we mean each persons assigned slice is either their favourite slice or has a 
+        value within some small number, {'\u03B5'}, of the value of their favourite slice.)
       </p>
 
       <p>
@@ -953,27 +1007,27 @@ const BranzeiNisan = () => {
       </p>
 
       <p>
-        The idea is to first have all agents return a division that they believe would split
-        the cake into 3 equal pieces and the agent who's division involves the smallest piece 3 
+        The idea is to first have all 3 people return a division that they believe would split
+        the cake into 3 equal pieces and the person who's division involves the smallest piece 3 
         is chosen.
       </p>
 
       <p>
-        If this agent's division for 3 equal pieces is envy-free, the algorithm stops and 
+        If this person's division for 3 equal pieces is envy-free, the algorithm stops and 
         the division is returned. If not, we move on to part 2.
       </p>
 
       <p>
-        In the case where the division is not envy-free, the two remaining agents must both 
+        In the case where the division is not approximately envy-free, the two remaining people must both 
         prefer either piece 1 or piece 2.  {' '} <strong>Remember, they cannot prefer piece 3 as their
-        division into 3 equal pieces had a larger piece 3 than the chosen agent.</strong> {' '}
+        division into 3 equal pieces had a larger piece 3 than the chosen person.</strong> {' '}
       </p>
 
       <p>
-        The piece that both remaining agents prefer is reduced in size with the other two
-        slices increasing in size with the chosen agent remaining indifferent between them.
-        Eventually, the piece will be too small for both agents to prefer. When this point
-        is reached, the final division must be envy-free.
+        The piece that both remaining people prefer is reduced in size with the other two
+        pieces increasing in size with the chosen person remaining indifferent between them.
+        Eventually, the piece will be too small for both people to prefer. When this point
+        is reached, the final division must be approximately envy-free.
       </p>
 
       <p>Let's try it out!</p>
@@ -986,7 +1040,7 @@ const ThreeWayDivisionWithBN = () => {
   return (
     <>
       <h2>Division with the Brânzei-Nisan Algorithm</h2>
-      <p>Let's see how to create an envy-free outcome.</p>
+      <p>Let's see how to create an approximately envy-free outcome.</p>
       <p>Here is the problem again:</p>
 
       {branzeiNisanPreferences}
@@ -1064,12 +1118,13 @@ const ThreeWayDivisionWithBN = () => {
 
       <p>
         This solution is{' '}
-        <strong>both proportional, envy-free, and with minimum cuts!</strong>
+        <strong>both proportional, approximately envy-free, and with minimum cuts!</strong>
       </p>
 
       <Info>
-        For an explanation as to why this is guaranteed to be envy-free, see{' '}
-        <Link href={'https://www.semanticscholar.org/reader/b59603dbcb2c407249577055be55ae59df6c7249'}>
+        For an explanation as to why this is guaranteed to be approximately envy-free and why
+        approximation is important, see{' '}
+        <Link href={'https://arxiv.org/abs/1705.02946'}>
           the research paper by Brânzei and Nisan.
         </Link>
       </Info>
@@ -1086,18 +1141,18 @@ const Piecewise = () => {
       <p>
         Next we will discuss a new method that can divide a resource 
         in a way that is {' '} <strong>guaranteed to be envy-free for 
-        any number of agents!</strong>
+        any number of people!</strong>
       </p>
 
       <p>
         One caveat for this algorithm is that it only works for piecewise-constant
-        preferences. That means that each agent's preference for a specific flavour 
+        preferences. That means that each person's preference for a specific flavour 
         of the cake must be one value for the whole flavour. i.e. it cannot be 
         sloped.
       </p>
 
       <p>
-        The idea is to split the cake into segments where each agent has a constant 
+        The idea is to split the cake into segments where each person has a constant 
         valuation for each segment that is greater than zero.
       </p>
 
@@ -1108,8 +1163,8 @@ const Piecewise = () => {
 
       <p>
         The way this is done is that it adds up the value of all the segments that are not being
-        inspected to find the minimum value of each slice for the agents. The value of the slices
-        for each agent can then be represented as a linear function of the cut positions 
+        inspected to find the minimum value of each piece for each person. The value of the pieces
+        for each person can then be represented as a linear function of the cut positions 
         (i.e. mx + c where m is the value of the inspected segment, c is the minimum value
         we've calculated, and x is the proportion of the way through the inspected segment that 
         the cut lies.)
@@ -1136,9 +1191,9 @@ const Piecewise = () => {
 const ThreeWayDivisionWithPC = () => {
   return (
     <>
-      <h2>Division with the Brânzei-Nisan Algorithm</h2>
+      <h2>Division with the Piecewise-Constant Algorithm</h2>
       <p>Let's see how to create an envy-free outcome.</p>
-      <p>Here is the problem again:</p>
+      <p>Here is the problem:</p>
 
       {piecewiseConstantPreferences}
 
@@ -1230,6 +1285,196 @@ const ThreeWayDivisionWithPC = () => {
   )
 }
 
+const HollenderRubinstein = () => {
+  return (
+    <>
+      <h2>The Hollender-Rubinstein Algorithm</h2>
+      <p>
+        In 2023, <em>Alexandros Hollender</em> and <em>Aviad Rubinstein</em> developed an 
+        algorithm similar to the Brânzei-Nisan algorithm that divides a resource between 
+        {' '} <strong>4 people</strong> {' '} 
+        in a way that is {' '} <strong>guaranteed to be envy-free with only 3 cuts!</strong>.
+      </p>
+
+      <p>
+        The steps are more complex than Brânzei-Nisan, you can read them below if you are
+        curious.
+      </p>
+
+      <p>
+        The algorithm begins similarly to Brânzei-Nisan. the first step is to first have person
+        1 return a division that they believe would split the cake into 4 equal pieces.
+      </p>
+
+      <p>
+        If this person's division for 4 equal pieces is envy-free, the algorithm stops and 
+        the division is returned. If not, we move on to part 2.
+      </p>
+
+      <p>
+        The idea behind this algorithm is that person 1's valuation for their preferred slices, 
+        we can call it {'\u03B1'}, is increased with the aim of finding an approximately envy-free
+        division. The way we discern how to change {'\u03B1'} is according to certain conditions A 
+        & B.
+      </p>
+
+      <p>
+        Condition A is that person 1 is indifferent between their 3 preferred pieces of value {' '}
+         {'\u03B1'} and the remaining slice is preferred by at least two of the remaining people.
+      </p>
+
+      <p>
+        Condition B is that person 1 is indifferent between their 2 preferred pieces of value {' '}
+         {'\u03B1'} and both remaining slice are each preferred by at least two of the remaining people.
+      </p>
+
+      <p>
+        The important thing to know is that, if the initial division is not envy-free, then one or both
+        of the conditions must hold, the conditions cannot hold for {'\u03B1'}=1, and an 
+        envy-free division must exist at the point where neither conditions hold.
+      </p>
+
+      <p>
+        With these facts in mind, the algorithm will increase {'\u03B1'} until the point immediately
+        before the conditions fail to hold and the division at this point is returned and is 
+        approximately envy-free.
+      </p>
+
+      <p>Let's try it out!</p>
+
+      <p></p>
+    </>
+  )
+}
+const FourWayDivision = () => {
+  return (
+    <>
+      <h2>Division with the Hollender-Rubinstein Algorithm</h2>
+      <p>Let's see how to create an approximately envy-free outcome.</p>
+      <p>Here is the problem:</p>
+
+      {hollenderRubinsteinPreferences}
+
+      <Box component="p" marginY={6}>
+        The cake is split using the Hollender-Rubinstein Algorithm.
+      </Box>
+
+      <GraphContext.Provider
+        value={{
+          ...createScales({
+            innerWidth: 300,
+            innerHeight: 80,
+            cakeSize: 3,
+          }),
+          width: 300,
+          height: 80,
+          labels: sampleLabels3Flavor,
+          cakeSize: 3,
+          names: ['Aki', 'Bruno', 'Chloe', 'Douglas', 'The Algorithm'],
+          namesPossessive: ["Aki's", "Bruno's", "Chloe's", "Douglas's"],
+        }}
+      >
+        {/* 
+          Probably better to actually run the algo than use saved results.
+          If we change the phrasing in the steps, this will be stale.
+        */}
+        <ResultsSteps algoUsed="hollenderRubinstein" result={sample4PersonResults} />
+      </GraphContext.Provider>
+
+      <Box component="p" marginY={6}>
+        {' '}
+      </Box>
+
+      <Box position="relative" width="fit-content" marginX="auto">
+        <Box
+          component="img"
+          src={hollenderRubinsteinResults}
+          //add alt text
+          alt=""
+          maxHeight={500}
+        />
+
+        <Box
+          position={{ xs: 'relative', sm: 'absolute' }}
+          display="grid"
+          top={0}
+          left={0}
+          height="100%"
+          width="100%"
+          paddingX="10px"
+          paddingY="30px"
+          sx={{
+            gridTemplateColumns: 'repeat(4,1fr)',
+            gridTemplateRows: 'repeat(4,1fr)',
+            gridTemplateAreas: `
+              "a . . ." 
+              ". b . ." 
+              ". . c ."
+              ". . . d"`,
+            gridRowGap: '12px',
+          }}
+          textAlign="center"
+        >
+          <OverlayText justifySelf="flex-start" character="Aki" gridArea="a">
+            Aki gets this piece
+          </OverlayText>
+          <OverlayText justifySelf="flex-start" character="Bruno" gridArea="b">
+            Bruno gets this piece
+          </OverlayText>
+          <OverlayText justifySelf="flex-end" character="Chloe" gridArea="c">
+            Chloe gets this piece
+          </OverlayText>
+          <OverlayTextDouglas justifySelf="flex-end" character="Douglas" gridArea="d">
+            Douglas gets this piece
+          </OverlayTextDouglas>
+        </Box>
+      </Box>
+
+      <p>
+        This solution is{' '}
+        <strong>both proportional, approximately envy-free, and with minimum cuts!</strong>
+      </p>
+
+      <Info>
+        For an explanation as to why this is guaranteed to be approximately envy-free and why
+        approximation is important, see{' '}
+        <Link href={'https://arxiv.org/abs/2311.02075'}>
+          the research paper by Hollender and Nisan.
+        </Link>
+      </Info>
+
+      {/* <p>Could there be an even better solution?</p> */}
+    </>
+  )
+}
+const Recap3 = () => {
+  return (
+    <>
+      <h2>Part 3 Recap</h2>
+      <p>Let's review</p>
+      <dl>
+        <dt>Brânzei-Nisan Algorithm</dt>
+        <dd>
+          A 3-person, approximately envy-free method for fair 
+          division with minimal cuts.{' '}
+        </dd>
+
+        <dt>Piecewise-Constant Algorithm</dt>
+        <dd>
+          An envy-free method for fair division between any amount of people 
+          assuming piecewise-constant preferences.{' '}
+        </dd>
+
+        <dt>Hollender-Rubinstein Algorithm</dt>
+        <dd>
+          A 4-person, approximately envy-free method for fair 
+          division with minimal cuts.
+        </dd>
+      </dl>
+    </>
+  )
+}
+
 // Removing this part as it confuses people and the example can no longer be Pareto-Optimized
 // const ParetoOptimal = () => {
 //   return (
@@ -1284,8 +1529,12 @@ const Ending = () => {
       <p>Give it a try, experiment!</p>
       <p>Split a 10-flavor cake! See if you can follow the algorithms!</p>
       <p>
-        The tool uses <strong>Cut and Choose</strong> for 2 people and{' '}
-        <strong>the Selfridge-Conway Method</strong> for 3, other algorithms may be added
+        The tool uses <strong>Cut and Choose</strong> for 2 people,{' '}
+        <strong>the Selfridge-Conway Method</strong>{' '} and {' '}<strong>the 
+        Brânzei-Nisan Algorithm</strong> for 3, and {' '}<strong>the 
+        Hollender-Rubinstein Algorithm</strong> {' '} for 4. It can also use
+        {' '}<strong>the Piecewise-Constant Algorithm</strong> for 3 or 4 people
+        if you have piecewise-constant preferences. Other algorithms may be added
         in the future.
       </p>
 
