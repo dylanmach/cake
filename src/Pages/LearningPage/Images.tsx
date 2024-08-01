@@ -8,6 +8,7 @@ import akiChar from '../../images/character/aki.svg'
 import brunoChar from '../../images/character/bruno.svg'
 import chloeChar from '../../images/character/chloe.svg'
 import brunoSadChar from '../../images/character/bruno sad.svg'
+import douglasChar from '../../images/character/douglas.svg'
 
 interface ImageContainerProps {
   children: ReactNode
@@ -66,14 +67,16 @@ const characterImageMap = {
   Bruno: brunoChar,
   Chloe: chloeChar,
   'Bruno Sad': brunoSadChar,
+  Douglas: douglasChar,
 }
 
 interface CharacterImageProps {
-  character: 'Aki' | 'Bruno' | 'Chloe' | 'Bruno Sad'
+  character: 'Aki' | 'Bruno' | 'Chloe' | 'Bruno Sad' | 'Douglas'
   width?: string | number
   hideName?: boolean
   sx?: ComponentProps<typeof Box>['sx']
 }
+
 export const CharacterImage = ({
   character,
   width = 120,
