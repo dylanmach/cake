@@ -2348,11 +2348,13 @@ def first_slice_value(x, segments, agent, cut):
     for i in range(cut):
         first_agent_constant_value += segments[agent][i]['area']
     first_agent_variable_value = segments[agent][cut]['value']
-    if ((0 <= x) and (x <= cut_range)):
-        value = first_agent_constant_value + x * first_agent_variable_value 
-        return value 
-    else:
-        return "Input out of bounds"
+    # if ((0 <= x) and (x <= cut_range)):
+    #     value = first_agent_constant_value + x * first_agent_variable_value 
+    #     return value 
+    # else:
+    #     return "Input out of bounds"
+    value = first_agent_constant_value + x * first_agent_variable_value 
+    return value 
     
 
 def middle_slice_value(x, y, segments, agent, cut_one, cut_two):
@@ -2363,8 +2365,8 @@ def middle_slice_value(x, y, segments, agent, cut_one, cut_two):
         middle_agent_constant_value += segments[agent][i]['area']
     middle_agent_variable_value_component_one = segments[agent][cut_one]['value']
     middle_agent_variable_value_component_two = segments[agent][cut_two]['value']
-    assert (((0 <= x) and (x <= cut_one_range)) and ((0 <= y) and (y <= cut_two_range))), \
-        "cut out of range"
+    #assert (((0 <= x) and (x <= cut_one_range)) and ((0 <= y) and (y <= cut_two_range))), \
+    #    "cut out of range"
     if cut_one != cut_two:
         value = middle_agent_constant_value + (cut_one_range - x) * middle_agent_variable_value_component_one + \
                 y * middle_agent_variable_value_component_two
@@ -2380,11 +2382,13 @@ def last_slice_value(y, segments, agent, cut):
     for i in range(cut+1, amount_of_segments):
         last_agent_constant_value += segments[agent][i]['area']
     last_agent_variable_value = segments[agent][cut]['value']
-    if ((0 <= y) and (y <= cut_range)):
-        value =  last_agent_constant_value + (cut_range - y) * last_agent_variable_value
-        return value
-    else:
-        return "Input out of bounds"
+    # if ((0 <= y) and (y <= cut_range)):
+    #     value =  last_agent_constant_value + (cut_range - y) * last_agent_variable_value
+    #     return value
+    # else:
+    #     return "Input out of bounds"
+    value =  last_agent_constant_value + (cut_range - y) * last_agent_variable_value
+    return value
     
 
 def constraints_three_agents(segments, agents, cuts, params):
