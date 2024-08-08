@@ -324,14 +324,14 @@ def find_start_cut(agent, prefs, start, end, value, epsilon, queries):
         start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon, queries[0])
     else:
         start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon)
-    if (start_cut is not None) and (start_bounds.upper - start_cut >= end - end_bounds.lower):
+    if (start_cut is not None) and (start_bounds.upper - start_cut + 1e-15 >= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
         return start_cut
     if queries is not None:
         start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon, queries[1])
     else:
         start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon)
-    if (start_cut is not None) and (start_bounds.upper - start_cut <= end - end_bounds.lower):
+    if (start_cut is not None) and (start_bounds.upper - start_cut - 1e-15 <= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
         return start_cut
     else:
@@ -350,7 +350,7 @@ def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon, queries
     denominator = (queries[2] - queries[0]) / epsilon
     start_cut = (value - component_one - component_two - 
                  component_three - component_four) / denominator
-    if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
+    if (start_cut + 1e-15 >= start_bounds.lower) and (start_cut - 1e-15 <= start_bounds.upper):
         return start_cut
     else:
         return None
@@ -367,7 +367,7 @@ def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon, queries
     denominator = (queries[0] - queries[1]) / epsilon
     start_cut = (value - component_one - component_two - 
                  component_three) / denominator
-    if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
+    if (start_cut + 1e-15 >= start_bounds.lower) and (start_cut - 1e-15 <= start_bounds.upper):
         return start_cut
     else:
         return None
@@ -468,14 +468,14 @@ def find_end_cut(agent, prefs, start, end, value, epsilon, queries):
         end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon, queries[0])
     else:
         end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon)
-    if (end_cut is not None) and (start_bounds.upper - start >= end_cut - end_bounds.lower):
+    if (end_cut is not None) and (start_bounds.upper - start + 1e-15 >= end_cut - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
         return end_cut
     if queries is not None:
         end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon, queries[1])
     else:
         end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon)
-    if (end_cut is not None) and (start_bounds.upper - start <= end_cut - end_bounds.lower):
+    if (end_cut is not None) and (start_bounds.upper - start - 1e-15 <= end_cut - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
         return end_cut
     else:
@@ -491,7 +491,7 @@ def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon, queries =
     component_three = -((queries[1] - queries[0]) / epsilon) * end_bounds.lower
     denominator = (queries[1] - queries[0]) / epsilon
     end_cut = (value - component_one - component_two - component_three) / denominator
-    if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
+    if (end_cut + 1e-15 >= end_bounds.lower) and (end_cut - 1e-15 <= end_bounds.upper):
         return end_cut
     else:
         return None
@@ -509,7 +509,7 @@ def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon, queries =
     denominator = (queries[0] - queries[2]) / epsilon
     end_cut = (value - component_one - component_two - 
                component_three - component_four) / denominator
-    if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
+    if (end_cut + 1e-15 >= end_bounds.lower) and (end_cut - 1e-15 <= end_bounds.upper):
         return end_cut
     else:
         return None
@@ -573,26 +573,26 @@ def find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon):
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     bisection_bounds = find_epsilon_interval(bisection_cut_bounds, epsilon)
     bisection_cut = find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, end, epsilon)
-    if (bisection_cut is not None) and (start_bounds.upper - start >= bisection_cut - bisection_bounds.lower) and \
-        (bisection_bounds.upper - bisection_cut >= end - end_bounds.lower):
+    if (bisection_cut is not None) and (start_bounds.upper - start + 1e-15 >= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut + 1e-15 >= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
                    value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
     bisection_cut = find_bisection_cut_variant_one_two(agent, prefs, start, bisection_bounds, end, epsilon)
-    if (bisection_cut is not None) and (start_bounds.upper - start >= bisection_cut - bisection_bounds.lower) and \
-        (bisection_bounds.upper - bisection_cut <= end - end_bounds.lower):
+    if (bisection_cut is not None) and (start_bounds.upper - start + 1e-15 >= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut - 1e-15 <= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
                    value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
     bisection_cut = find_bisection_cut_variant_two_one(agent, prefs, start, bisection_bounds, end, epsilon)
-    if (bisection_cut is not None) and (start_bounds.upper - start <= bisection_cut - bisection_bounds.lower) and \
-        (bisection_bounds.upper - bisection_cut >= end - end_bounds.lower):
+    if (bisection_cut is not None) and (start_bounds.upper - start - 1e-15 <= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut + 1e-15 >= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
                    value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
     bisection_cut = find_bisection_cut_variant_two_two(agent, prefs, start, bisection_bounds, end, epsilon)
-    if (bisection_cut is not None) and (start_bounds.upper - start <= bisection_cut - bisection_bounds.lower) and \
-        (bisection_bounds.upper - bisection_cut <= end - end_bounds.lower):
+    if (bisection_cut is not None) and (start_bounds.upper - start - 1e-15 <= bisection_cut - bisection_bounds.lower) and \
+        (bisection_bounds.upper - bisection_cut - 1e-15 <= end - end_bounds.lower):
         assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
                    value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
@@ -627,7 +627,7 @@ def find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, en
     denominator = right_multiple - left_multiple
 
     bisection_cut = numerator / denominator
-    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+    if (bisection_cut + 1e-15 >= bisection_bounds.lower) and (bisection_cut - 1e-15 <= bisection_bounds.upper):
         return bisection_cut
     else:
         return None
@@ -658,7 +658,7 @@ def find_bisection_cut_variant_one_two(agent, prefs, start, bisection_bounds, en
     denominator = right_multiple - left_multiple
 
     bisection_cut = numerator / denominator
-    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+    if (bisection_cut + 1e-15 >= bisection_bounds.lower) and (bisection_cut - 1e-15 <= bisection_bounds.upper):
         return bisection_cut
     else:
         return None
@@ -693,7 +693,7 @@ def find_bisection_cut_variant_two_one(agent, prefs, start, bisection_bounds, en
     denominator = right_multiple - left_multiple
 
     bisection_cut = numerator / denominator
-    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+    if (bisection_cut + 1e-15 >= bisection_bounds.lower) and (bisection_cut - 1e-15 <= bisection_bounds.upper):
         return bisection_cut
     else:
         return None
@@ -726,7 +726,7 @@ def find_bisection_cut_variant_two_two(agent, prefs, start, bisection_bounds, en
     denominator = right_multiple - left_multiple
 
     bisection_cut = numerator / denominator
-    if (bisection_cut >= bisection_bounds.lower) and (bisection_cut <= bisection_bounds.upper):
+    if (bisection_cut + 1e-15 >= bisection_bounds.lower) and (bisection_cut - 1e-15 <= bisection_bounds.upper):
         return bisection_cut
     else:
         return None
@@ -1211,7 +1211,7 @@ def condition_a_check(slice, prefs, alpha, division, epsilon):
                            np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 12) and \
                 np.isclose(agent_slice_values[j][slice-1], 
                            np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 12) and \
-                (agent_slice_values[0][slice-1] <= alpha)):
+                (agent_slice_values[0][slice-1] <= alpha + epsilon / 12)):
                 return True
     return False
             
@@ -1341,7 +1341,7 @@ def condition_b_check(slices, prefs, alpha, division, epsilon):
                                np.max(agent_slice_values[i]), rtol = 0, atol = epsilon / 12) and \
                     (np.isclose(agent_slice_values[j][slices[s]-1], 
                                 np.max(agent_slice_values[j]), rtol = 0, atol = epsilon / 12) and \
-                    (agent_slice_values[0][slices[s]-1] <= alpha))):
+                    (agent_slice_values[0][slices[s]-1] <= alpha + epsilon / 12))):
                     slice_check[s] = True
     if (slice_check[0] == True and slice_check[1] == True):
         return True
