@@ -1138,8 +1138,10 @@ def check_unique_preferences_three_agent(agent_one_slice_values,
         for j in range(3):
             if j == i:
                 continue
-            if  ((agent_one_slice_values[i] == np.max(agent_one_slice_values)) and \
-                 (agent_two_slice_values[j] == np.max(agent_two_slice_values))):
+            if  (np.isclose(agent_one_slice_values[i], np.max(agent_one_slice_values), 
+                            rtol=0, atol = epsilon / 12) and \
+                 np.isclose(agent_two_slice_values[j], np.max(agent_two_slice_values),
+                            rtol=0, atol = epsilon / 12)):
                 return True
     return False
 
@@ -1166,9 +1168,12 @@ def check_unique_preferences_four_agent(agent_one_slice_values,
             for k in range(4):
                 if (k == j) or (k == i) or (j == i):
                     continue
-                if  (agent_one_slice_values[i] == np.max(agent_one_slice_values)) and \
-                    (agent_two_slice_values[j] == np.max(agent_two_slice_values)) and \
-                    (agent_three_slice_values[k] == np.max(agent_three_slice_values)):
+                if  np.isclose(agent_one_slice_values[i], np.max(agent_one_slice_values),
+                               rtol=0, atol=epsilon / 12) and \
+                    np.isclose(agent_two_slice_values[j], np.max(agent_two_slice_values),
+                               rtol=0, atol=epsilon / 12) and \
+                    np.isclose(agent_three_slice_values[k], np.max(agent_three_slice_values),
+                               rtol=0, atol=epsilon / 12):
                     return True
     return False
 
