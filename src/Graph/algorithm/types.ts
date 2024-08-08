@@ -52,7 +52,7 @@ export const Algorithms: Record<AlgoName, Algorithm> = {
   },
   branzeiNisan: {
     key: 'branzeiNisan',
-    name: 'Branzei-Nisan',
+    name: 'Brânzei-Nisan',
     numAgentsText: '3 people',
     minAgents: 3,
     maxAgents: 3,
