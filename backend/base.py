@@ -305,9 +305,13 @@ def value_query(agent, prefs, start, end, epsilon, queries = [None, None]):
 def start_cut_query(agent, prefs, end, value, epsilon, bounds, queries):
     if bounds is None:
         start_cut_bounds = Bounds(0, end)
+        count = 0
         while (start_cut_bounds.upper // epsilon) != (start_cut_bounds.lower // epsilon):
             start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
                                                     value, epsilon)
+            count += 1
+            if count >= 52:
+                break
     else:
         start_cut_bounds = bounds
     start = start_cut_bounds.midpoint()
@@ -445,9 +449,13 @@ def start_cut_bounds_update(agent, prefs, end, start_cut_bounds,
 def end_cut_query(agent, prefs, start, value, epsilon, bounds, queries):
     if bounds is None:
         end_cut_bounds = Bounds(start, 1)
+        count = 0
         while (end_cut_bounds.upper // epsilon) != (end_cut_bounds.lower // epsilon):
             end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
                                                 value, epsilon)
+            count += 1
+            if count >= 52:
+                break
     else:
         end_cut_bounds = bounds
     end = end_cut_bounds.midpoint()
@@ -541,11 +549,14 @@ def bisection_cut_query(agent, prefs, start, end, epsilon):
     if start == end:
         return start
     bisection_cut_bounds = Bounds(start, end)
-    #TODO
+    count = 0
     while (bisection_cut_bounds.upper // epsilon) != (bisection_cut_bounds.lower // epsilon):
         bisection_cut_bounds = \
             bisection_cut_bounds_update(agent, prefs, start, end,
                                         bisection_cut_bounds, epsilon)
+        count += 1
+        if count >= 52:
+            break
     bisection_cut = find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon)
     return bisection_cut
 
@@ -957,8 +968,12 @@ def right_cut_bounds_update(prefs, right_cut_bounds, agents_number, epsilon):
 def find_cut_epsilon_interval(prefs, agents_number, epsilon, cut_bounds_update):
     #make agents_number optional.
     cut_bounds = Bounds(0, 1)
+    count = 0
     while (cut_bounds.upper // epsilon) != (cut_bounds.lower // epsilon):
         cut_bounds = cut_bounds_update(prefs, cut_bounds, agents_number, epsilon)
+        count += 1
+        if count >= 52:
+            break
     cut_epsilon_interval = find_epsilon_interval(cut_bounds, epsilon)
     return cut_epsilon_interval
 
@@ -1479,11 +1494,15 @@ def rightmost_cut_bounds_one_apart_update(agent, prefs, rightmost_cut_bounds,
 def non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, left_bound, 
                                 right_bound, epsilon, cut_bounds_update):
     cut_bounds = Bounds(left_bound, right_bound)
+    count = 0
     while (cut_bounds.upper // epsilon) != (cut_bounds.lower // epsilon):
         cut_bounds = \
             cut_bounds_update(indifferent_agent, prefs, 
                               cut_bounds, alpha, left_bound,
                               right_bound, epsilon)
+        count += 1
+        if count >= 52:
+            break
     cut_epsilon_interval = find_epsilon_interval(cut_bounds, epsilon)
     return cut_epsilon_interval
 
@@ -1981,12 +2000,14 @@ def hollender_rubinstein(raw_prefs, cake_size):
                                                  epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 4, epsilon)
         raw_envy_free_division = raw_division(equipartition, cake_size, 4)
-        return jsonify({'equipartition': raw_envy_free_division,
-                        'division': 0,
-                        'assignment': slice_assignments,
-                        'condition': [0],
-                        'slices': 0,
-                        'indifferent_agent': 0})
+        print("done")
+        return(0)
+        # return jsonify({'equipartition': raw_envy_free_division,
+        #                 'division': 0,
+        #                 'assignment': slice_assignments,
+        #                 'condition': [0],
+        #                 'slices': 0,
+        #                 'indifferent_agent': 0})
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
     while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
@@ -2002,12 +2023,13 @@ def hollender_rubinstein(raw_prefs, cake_size):
     raw_equipartition = raw_division(equipartition, cake_size, 4)
     slice_assignments = assign_slices(envy_free_division, prefs, 4, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
-    return jsonify({'equipartition': raw_equipartition,
-                    'division': raw_envy_free_division,
-                    'assignment': slice_assignments,
-                    'condition': info['condition'].to_list(),
-                    'slices': info['slices'].to_list(),
-                    'indifferent_agent': info['indifferent_agent'].to_list()})
+    print("done")
+    # return jsonify({'equipartition': raw_equipartition,
+    #                 'division': raw_envy_free_division,
+    #                 'assignment': slice_assignments,
+    #                 'condition': info['condition'].to_list(),
+    #                 'slices': info['slices'].to_list(),
+    #                 'indifferent_agent': info['indifferent_agent'].to_list()})
     #return raw_envy_free_division, slice_assignments
 
 def value_query_hungry_additive(agent, prefs, end, epsilon):
@@ -2713,12 +2735,12 @@ def piecewise_constant_algorithm(preferences, cake_size):
         slice_assignments = {1: agents[0], 2: agents[1], 
                             3: agents[2], 4: agents[3]}
         raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
-    
-    return jsonify({'segments': raw_segments,
-                    'cut_positions': cut_positions,
-                    'division': raw_envy_free_division,
-                    'assignment': slice_assignments,
-                    'agents_number': agents_number})
+    print("done")
+    # return jsonify({'segments': raw_segments,
+    #                 'cut_positions': cut_positions,
+    #                 'division': raw_envy_free_division,
+    #                 'assignment': slice_assignments,
+    #                 'agents_number': agents_number})
     
 
 @app.route('/api/three_agent_additive', methods=['POST'])
