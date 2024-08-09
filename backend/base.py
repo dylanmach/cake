@@ -1948,7 +1948,7 @@ def assign_slices(division, prefs, agents_number, epsilon, additive = False):
     max_slice_values = np.max(agent_slice_values, axis = 1)
     max_slice_values_matrix = np.tile(max_slice_values, [agents_number,1]).T
     cost_matrix = max_slice_values_matrix - agent_slice_values
-    cost_matrix[cost_matrix>epsilon] = 10000
+    cost_matrix[cost_matrix>epsilon / 12] = 10000
     _, slice_assignments = linear_sum_assignment(cost_matrix)
     assignments = {}  # To store the assignments of slices to agents
     for j in range(1,agents_number+1):
@@ -2038,10 +2038,25 @@ def hollender_rubinstein(raw_prefs, cake_size):
     #                 'indifferent_agent': info['indifferent_agent'].to_list()})
     #return raw_envy_free_division, slice_assignments
 
-def value_query_hungry_additive(agent, prefs, end, epsilon):
-    initial_value = value_query_initial(agent, prefs, 0, end)
-    value = (1 - epsilon / 2) * initial_value  + epsilon / 2
-    return value
+
+def hungriness_additive(prefs, epsilon):
+    for agents in prefs:
+        hungriness_check = True
+        for segments in agents:
+            if (segments['startValue'] == 0) and (segments['endValue'] == 0):
+                hungriness_check = False
+                break
+        if hungriness_check == False:
+            for segments in agents:
+                segments['startValue'] = (1 - epsilon / 2) * segments['startValue']  + epsilon / 2
+                segments['endValue'] = (1 - epsilon / 2) * segments['endValue']  + epsilon / 2
+    return prefs
+
+
+# def value_query_hungry_additive(agent, prefs, end, epsilon):
+#     initial_value = value_query_initial(agent, prefs, 0, end)
+#     value = (1 - epsilon / 2) * initial_value  + epsilon / 2
+#     return value
 
 # def value_query_additive(agent, prefs, start, end, epsilon):
 #     initial_value = value_query_initial(agent, prefs, start, end)
@@ -2054,7 +2069,7 @@ def value_query_piecewise_additive(agent, prefs, end, epsilon):
     assert np.isclose(check, 0, rtol = 0, atol= 1e-15) or \
            np.isclose(check, epsilon, rtol = 0, atol= 1e-15),\
            'end cut must be divisible by epsilon'
-    initial_value = value_query_hungry_additive(agent, prefs, end, epsilon) 
+    initial_value = value_query_initial(agent, prefs, 0, end) 
     if initial_value % epsilon == 0:
         return initial_value
     else:
@@ -2202,7 +2217,7 @@ def middle_preferred_check(prefs, division, chosen_agent, epsilon):
 
 def middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
     right_cut = bisection_cut_query_additive(chosen_agent, prefs, cut_bounds.lower,
-                                             cut_bounds.upper, epsilon)
+                                            cut_bounds.upper, epsilon)
     right_slice_value = value_query_additive(chosen_agent, prefs, right_cut, 1, epsilon) 
     left_cut = cut_query_additive(chosen_agent, prefs, 0, right_slice_value, epsilon, end_cut = True) 
     division = ThreeAgentPortion(left_cut, right_cut)
@@ -2210,7 +2225,7 @@ def middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
         cut_bounds.upper = right_cut
     else:
         cut_bounds.lower = right_cut 
-    return cut_bounds, division                                                                                                                                          
+    return cut_bounds, division                                                                                                                                  
     
 
 def middle_preferred_case(prefs, division, chosen_agent, epsilon):
@@ -2220,7 +2235,8 @@ def middle_preferred_case(prefs, division, chosen_agent, epsilon):
                                      half_of_total, epsilon, end_cut = False)
     cut_bounds = Bounds(lower_bound, upper_bound)
     while check_unique_preferences_additive(prefs, division, epsilon) == False:
-        cut_bounds, division = middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon)
+        cut_bounds, division = middle_preferred_bounds_update(prefs, cut_bounds, 
+                                                              chosen_agent, epsilon)
     return division
 
 def left_preferred_check(prefs, division, chosen_agent, epsilon):
@@ -2261,15 +2277,17 @@ def left_preferred_case(prefs, division, chosen_agent, epsilon):
 
 
 def branzei_nisan_additive(raw_prefs, cakeSize):
-    prefs = one_lipschitz(raw_prefs, cakeSize)
+    non_hungry_prefs = one_lipschitz(raw_prefs, cakeSize)
+    prefs = hungriness_additive(non_hungry_prefs, epsilon)
     equipartition, chosen_agent = compute_equipartition_additive(prefs, epsilon)
     if check_unique_preferences_additive(prefs, equipartition, epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 3, epsilon, additive = True)
         raw_envy_free_division = raw_division(equipartition, cakeSize, 3)
-        return jsonify({'equipartition': raw_envy_free_division,
-                        'assignment': slice_assignments,
-                        'chosen_agent': chosen_agent,
-                        'condition': 0})
+        print('done')
+        # return jsonify({'equipartition': raw_envy_free_division,
+        #                 'assignment': slice_assignments,
+        #                 'chosen_agent': chosen_agent,
+        #                 'condition': 0})
     if middle_preferred_check(prefs, equipartition, chosen_agent, epsilon) == True:
         envy_free_division = middle_preferred_case(prefs, equipartition, chosen_agent, epsilon)
         specifics = 0
@@ -2279,12 +2297,13 @@ def branzei_nisan_additive(raw_prefs, cakeSize):
     raw_equipartition = raw_division(equipartition, cakeSize, 3)
     slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon, additive = True)
     raw_envy_free_division = raw_division(envy_free_division, cakeSize, 3)
-    return jsonify({'equipartition': raw_equipartition,
-                    'division': raw_envy_free_division,
-                    'assignment': slice_assignments,
-                    'chosen_agent': chosen_agent,
-                    'condition': 1,
-                    'specifics': specifics})
+    print('done')
+    # return jsonify({'equipartition': raw_equipartition,
+    #                 'division': raw_envy_free_division,
+    #                 'assignment': slice_assignments,
+    #                 'chosen_agent': chosen_agent,
+    #                 'condition': 1,
+    #                 'specifics': specifics})
 
 
 #piecewise-constant algorithm
