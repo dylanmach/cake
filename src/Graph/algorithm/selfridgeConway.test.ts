@@ -1,5 +1,7 @@
 import { selfridgeConway } from './selfridgeConway'
-import { genFlatSeg, testIfEnvyFree, genRandomSegs } from './testUtil'
+import { genFlatSeg, testIfEnvyFree, genRandomSegs, genUniformRandomFlatSegs} from './testUtil'
+import { writeFileSync, appendFileSync } from 'fs';
+
 
 test('splits a "no trimming needed" uniform evaluation cake into even (almost) thirds', () => {
   // Use a cake size of 90 so it's evenly divisible into thirds.
@@ -127,4 +129,31 @@ test('splits randomly generated preferences fairly', () => {
   const segs = [genRandomSegs(100), genRandomSegs(100), genRandomSegs(100)]
   const result = selfridgeConway(segs, 100).solution
   testIfEnvyFree(3, result)
+})
+
+test('splits randomly generated preferences fairly', () => {
+  const csvFile = 'selfridge_conway_runtime_results.csv';
+
+  // Write the header of the CSV file
+  //writeFileSync(csvFile, 'cake size,Execution Time (s)\n');
+
+  for (let i = 1; i <= 20; i++) { // Example loop for 10 tests
+      const cakeSize = 320000
+
+      const segs = [genUniformRandomFlatSegs(cakeSize), genUniformRandomFlatSegs(cakeSize), 
+                    genUniformRandomFlatSegs(cakeSize)]
+      
+      const startTime = performance.now();
+      // Simulate some test or process
+      selfridgeConway(segs, cakeSize);
+
+      const endTime = performance.now();
+      const duration = (endTime - startTime) / 1000; // Convert milliseconds to seconds
+
+      // Write the result to the CSV file
+      appendFileSync(csvFile, `${cakeSize},${duration}\n`);
+
+      // Optional: Print to console for verification
+      console.log(`Test ${i}: ${duration} s`);
+  }
 })
