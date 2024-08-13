@@ -58,6 +58,18 @@ export const genRandomSegs = (cakeSize: number) => {
   return segs
 }
 
+export const genUniformRandomFlatSegs = (cakeSize: number) => {
+  const segs = []
+  const segWidth = 1 // make an even split now
+
+  let lastEnd = 0
+  for (let curr = 1; curr <= cakeSize; curr++) {
+    segs.push(genFlatSeg(lastEnd, lastEnd + segWidth, Math.random() * 10))
+    lastEnd += segWidth
+  }
+  return segs
+}
+
 export const testIfEnvyFree = (numPeople: number, result: AssignedSlice[]) => {
   for (let a = 0; a < numPeople; a++) {
     // Using agent `a`'s evaluations, collect each person's slice values into an array.
