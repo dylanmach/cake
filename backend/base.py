@@ -17,7 +17,7 @@ epsilon = 0.0025 / MAX_VALUATION
 
 def normalization(prefs):
     '''
-    Ensures that each agents values the
+    Ensures that each agents' valuation functions have max value at most 1 at any point.
     '''
     #Need to change.
     for agents in prefs:
@@ -28,6 +28,9 @@ def normalization(prefs):
         
 
 def change_bounds(prefs, cakeSize):
+    '''
+    Ensures that the valuation functions are on interval [0,1]
+    '''
     for agents in prefs:
         for segments in agents:
             app.logger.debug("hello")
@@ -39,11 +42,12 @@ def change_bounds(prefs, cakeSize):
 
 
 def one_lipschitz(prefs, cakeSize):
-    #Remember to scale by L at end.
+    '''
+    Ensures that each agents' valuation functions are 1-Lipschitz continuous.
+    '''
     prefs = change_bounds(prefs, cakeSize)
-    #prefs, normalizationConstants = normalization(prefs)
     prefs = normalization(prefs)
-    return prefs#, normalizationConstants
+    return prefs
 #Preprocessing above
 
 #ValueQuery Stuff below
@@ -61,31 +65,48 @@ def interpolate(segment, x_coordinate):
                          segment['endValue'] * (x_coordinate - segment['start'])) / 
                         (segment['end'] - segment['start']))                
         return y_coordinate
-    
 
 
 def find_partial_value_right_side(segment, partial_segment_end):
+    '''
+    Finds the partial value of a segment with endpoint between the 
+    segment's defined start and end.
+    '''
     segment_width = partial_segment_end - segment['start']
     partial_segment_start_value = segment['startValue']
     partial_segment_end_value = interpolate(segment, partial_segment_end)
     return area_under_curve(segment, partial_segment_start_value,
                             partial_segment_end_value, segment_width)
+
     
 def find_partial_value_left_side(segment, partial_segment_start):
+    '''
+    Finds the partial value of a segment with startpoint between the 
+    segment's defined start and end.
+    '''
     segment_width = segment['end'] - partial_segment_start
     partial_segment_start_value = interpolate(segment, partial_segment_start)
     partial_segment_end_value = segment['endValue']
     return area_under_curve(segment, partial_segment_start_value,
                             partial_segment_end_value, segment_width)
+
     
 def find_partial_value_two_sided(segment, partial_segment_start, partial_segment_end):
+    '''
+    Finds the partial value of a segment with startpoint and endpoint
+    between the segment's defined start and end.
+    '''
     segment_width = partial_segment_end - partial_segment_start
     partial_segment_start_value = interpolate(segment, partial_segment_start)
     partial_segment_end_value = interpolate(segment, partial_segment_end)
     return area_under_curve(segment, partial_segment_start_value,
                             partial_segment_end_value, segment_width)
+
     
 def area_under_curve(segment, start_value, end_value, width):
+    '''
+    Finds the area under of the piecewise-linear segment.
+    '''
     if segment['startValue'] == segment['endValue']:
         value = start_value * width
         return value
@@ -93,7 +114,11 @@ def area_under_curve(segment, start_value, end_value, width):
         value = 0.5 * (start_value + end_value) * width
         return value
 
+
 def find_full_value(segment):
+    '''
+    Finds the area under of the piecewise-linear segment.
+    '''
     segment_width = segment['end'] - segment['start']
     if segment['startValue'] == segment['endValue']:
         value = segment['startValue'] * segment_width
@@ -104,6 +129,9 @@ def find_full_value(segment):
     
 
 def one_sided_query(agent, prefs, end):
+    '''
+    Performs an eval query between 0 and the inputted end value.
+    '''
     segments = np.size(prefs[agent])
     value = 0
     for i in range(segments):
@@ -115,19 +143,17 @@ def one_sided_query(agent, prefs, end):
         
 
 def check_valid_bounds(start,end):
+    '''
+    Ensures that the eval query bounds are between 0 and 1
+    '''
     assert (start >= 0 and start <= 1 and end >= 0 and end <= 1), \
         "invalid bounds. start and end should be between 0 and 1."
-    
 
-# def value_query_initial(agent, prefs, start, end):
-#     if end <= start:
-#         value = 0
-#     else:
-#         value = one_sided_query(agent, prefs, end) - \
-#                 one_sided_query(agent, prefs, start)
-#     return value
 
 def value_query_initial(agent, prefs, start, end):
+    '''
+    Performs the eval query before modifications.
+    '''
     if end <= start:
         value = 0
         return value
@@ -151,6 +177,9 @@ def value_query_initial(agent, prefs, start, end):
     
 
 def value_query_hungry(agent, prefs, start, end, epsilon):
+    '''
+    Modifies eval query to ensure hungriness.
+    '''
     initial_value = value_query_initial(agent, prefs, start, end)
     value = initial_value / 2 + epsilon * (end - start)
     return value
@@ -158,6 +187,10 @@ def value_query_hungry(agent, prefs, start, end, epsilon):
 
 def intermediate_queries_variant_one(agent, prefs, start_bounds, 
                                      end_bounds, epsilon):
+    '''
+    Finds the intermediate value queries for the first variant of the 
+    first variant of the eval query defined by Hollender-Rubinstein.
+    '''
     query_one = value_query_hungry(agent, prefs, start_bounds.lower, 
                                 end_bounds.lower, epsilon)
     query_two = value_query_hungry(agent, prefs, start_bounds.lower, 
@@ -169,6 +202,10 @@ def intermediate_queries_variant_one(agent, prefs, start_bounds,
 
 def intermediate_queries_variant_two(agent, prefs, start_bounds, 
                                      end_bounds, epsilon):
+    '''
+    Finds the intermediate value queries for the first variant of the 
+    second variant of the eval query defined by Hollender-Rubinstein.
+    '''
     query_one = value_query_hungry(agent, prefs, start_bounds.upper, 
                                    end_bounds.upper, epsilon)
     query_two = value_query_hungry(agent, prefs, start_bounds.lower, 
@@ -179,6 +216,9 @@ def intermediate_queries_variant_two(agent, prefs, start_bounds,
 
 
 def piecewise_linear_bounds(start, end, epsilon):
+    '''
+    Finds the bounds on the epsilon grid that surround the start and endpoints inputted.
+    '''
     if start != 1:
         start_lower_bound = (start // epsilon) * epsilon
         start_upper_bound = start_lower_bound + epsilon 
@@ -199,6 +239,9 @@ def piecewise_linear_bounds(start, end, epsilon):
 
 
 def value_query_variant_one(agent, prefs, start, end, queries, epsilon):
+    '''
+    Performs first variant of the final value defined by Hollender-Rubinstein.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
@@ -211,6 +254,9 @@ def value_query_variant_one(agent, prefs, start, end, queries, epsilon):
 
 
 def value_query_variant_two(agent, prefs, start, end, queries, epsilon):
+    '''
+    Performs second variant of the final value defined by Hollender-Rubinstein.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
@@ -224,7 +270,7 @@ def value_query_variant_two(agent, prefs, start, end, queries, epsilon):
 
 def value_query(agent, prefs, start, end, epsilon, queries = [None, None]):
     '''
-    Linear interpolation on epsilon grid.
+    Identifies which value query variant to perform and then finds the value.
     '''
     check_valid_bounds(start,end)
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
@@ -237,72 +283,12 @@ def value_query(agent, prefs, start, end, epsilon, queries = [None, None]):
 #Value Query stuff above
 
 #Cut Query Stuff Below
-    
-# def start_cut_query(agent, prefs, end, value, epsilon):
-#     start_cut_bounds = Bounds(0, end)
-#     #TODO
-#     while abs(start_cut_bounds.upper - start_cut_bounds.lower) > 1e-15:
-#         start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
-#                                                    value, epsilon)
-#     start_cut = start_cut_bounds.midpoint()
-#     return start_cut
-
-# def start_cut_query(agent, prefs, end, value, epsilon):
-#     start_cut_bounds = Bounds(0, end)
-#     while (start_cut_bounds.upper // epsilon) != (start_cut_bounds.lower // epsilon):
-#         start_cut_bounds = start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
-#                                                    value, epsilon)
-#     start = start_cut_bounds.midpoint()
-#     start_cut = find_start_cut(agent, prefs, start, end, value, epsilon)
-#     return start_cut
-
-# def find_start_cut(agent, prefs, start, end, value, epsilon):
-#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-#     start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon)
-#     if (start_cut is not None) and (start_bounds.upper - start_cut >= end - end_bounds.lower):
-#         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
-#         return start_cut
-#     start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon)
-#     if (start_cut is not None) and (start_bounds.upper - start_cut <= end - end_bounds.lower):
-#         assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
-#         return start_cut
-#     else:
-#         return None
-        
-# def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon):
-#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-#     queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
-#                                                end_bounds, epsilon)
-#     component_one = -((end - end_bounds.lower) / 
-#                       epsilon) * queries[0]
-#     component_two = ((end - end_bounds.lower) / epsilon) * queries[1]
-#     component_three = (start_bounds.upper / epsilon) * queries[0]
-#     component_four = - (start_bounds.lower / epsilon) * queries[2]
-#     denominator = (queries[2] - queries[0]) / epsilon
-#     start_cut = (value - component_one - component_two - 
-#                  component_three - component_four) / denominator
-#     if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
-#         return start_cut
-#     else:
-#         return None
-    
-# def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon):
-#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-#     queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
-#                                                end_bounds, epsilon)
-#     component_one = ((end - end_bounds.lower) / 
-#                     epsilon) * queries[0]
-#     component_two = ((end_bounds.upper - end) / epsilon) * queries[2]
-#     component_three = -((queries[0] - queries[1]) / epsilon) * start_bounds.upper
-#     denominator = (queries[0] - queries[1]) / epsilon
-#     start_cut = (value - component_one - component_two - 
-#                  component_three) / denominator
-#     if (start_cut >= start_bounds.lower) and (start_cut <= start_bounds.upper):
-#         return start_cut
-#     else:
-#         return None
 
 def start_cut_query(agent, prefs, end, value, epsilon, bounds, queries):
+    '''
+    Performs a query that finds the associated start cut for an inputted end cut
+    and slice value.
+    '''
     if bounds is None:
         start_cut_bounds = Bounds(0, end)
         count = 0
@@ -311,14 +297,19 @@ def start_cut_query(agent, prefs, end, value, epsilon, bounds, queries):
                                                     value, epsilon)
             count += 1
             if count >= 52:
-                break
+                break #Breaks in the event that the exit condition is not reached as a result of 
+                      #floating point error.
     else:
         start_cut_bounds = bounds
     start = start_cut_bounds.midpoint()
     start_cut = find_start_cut(agent, prefs, start, end, value, epsilon, queries)
     return start_cut
 
+
 def find_start_cut(agent, prefs, start, end, value, epsilon, queries):
+    '''
+    Checks the start cut position is correct and returns the value.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is not None:
         start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon, queries[0])
@@ -336,8 +327,13 @@ def find_start_cut(agent, prefs, start, end, value, epsilon, queries):
         return start_cut
     else:
         return None
+
         
 def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon, queries = None):
+    '''
+    Implements algebraic solution for cut query with variant one 
+    after epsilon interval is identified.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
@@ -356,6 +352,10 @@ def find_start_cut_variant_one(agent, prefs, start, end, value, epsilon, queries
         return None
     
 def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon, queries = None):
+    '''
+    Implements algebraic solution for cut query with variant two
+    after epsilon interval is identified.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
@@ -375,6 +375,9 @@ def find_start_cut_variant_two(agent, prefs, start, end, value, epsilon, queries
 
 def start_cut_bounds_update(agent, prefs, end, start_cut_bounds, 
                             value, epsilon):
+    '''
+    Updates bounds for binary search.
+    '''
     start_cut = start_cut_bounds.midpoint()
     queried_value = value_query(agent, prefs, start_cut, end, epsilon)
     if queried_value <= value:
@@ -384,69 +387,11 @@ def start_cut_bounds_update(agent, prefs, end, start_cut_bounds,
     return start_cut_bounds
 
 
-# def end_cut_query(agent, prefs, start, value, epsilon):
-#     end_cut_bounds = Bounds(start, 1)
-#     #TODO
-#     while abs(end_cut_bounds.upper - end_cut_bounds.lower) > 1e-15:
-#         end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
-#                                                value, epsilon)
-#     end_cut = end_cut_bounds.midpoint()
-#     return end_cut
-
-# def end_cut_query(agent, prefs, start, value, epsilon):
-#     end_cut_bounds = Bounds(start, 1)
-#     while (end_cut_bounds.upper // epsilon) != (end_cut_bounds.lower // epsilon):
-#         end_cut_bounds = end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
-#                                                value, epsilon)
-#     end = end_cut_bounds.midpoint()
-#     end_cut = find_end_cut(agent, prefs, start, end, value, epsilon)
-#     return end_cut
-
-# def find_end_cut(agent, prefs, start, end, value, epsilon):
-#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-#     end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon)
-#     if (end_cut is not None) and (start_bounds.upper - start >= end_cut - end_bounds.lower):
-#         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
-#         return end_cut
-#     end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon)
-#     if (end_cut is not None) and (start_bounds.upper - start <= end_cut - end_bounds.lower):
-#         assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
-#         return end_cut
-#     else:
-#         return None
-        
-# def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon):
-#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-#     queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
-#                                                end_bounds, epsilon)
-#     component_one = ((start_bounds.upper - start) / epsilon) * queries[0]
-#     component_two = ((start - start_bounds.lower) / epsilon) * queries[2]
-#     component_three = -((queries[1] - queries[0]) / epsilon) * end_bounds.lower
-#     denominator = (queries[1] - queries[0]) / epsilon
-#     end_cut = (value - component_one - component_two - component_three) / denominator
-#     if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
-#         return end_cut
-#     else:
-#         return None
-    
-# def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon):
-#     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
-#     queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
-#                                                end_bounds, epsilon)
-#     component_one = -((start_bounds.upper - start) / 
-#                     epsilon) * queries[0]
-#     component_two = ((start_bounds.upper - start) / epsilon) * queries[1]
-#     component_three = -((end_bounds.lower) / epsilon) * queries[0]
-#     component_four = ((end_bounds.upper) / epsilon) * queries[2]
-#     denominator = (queries[0] - queries[2]) / epsilon
-#     end_cut = (value - component_one - component_two - 
-#                component_three - component_four) / denominator
-#     if (end_cut >= end_bounds.lower) and (end_cut <= end_bounds.upper):
-#         return end_cut
-#     else:
-#         return None
-
 def end_cut_query(agent, prefs, start, value, epsilon, bounds, queries):
+    '''
+    Performs a query that finds the associated end cut for an inputted start cut
+    and slice value.
+    '''
     if bounds is None:
         end_cut_bounds = Bounds(start, 1)
         count = 0
@@ -455,14 +400,19 @@ def end_cut_query(agent, prefs, start, value, epsilon, bounds, queries):
                                                 value, epsilon)
             count += 1
             if count >= 52:
-                break
+                break #Breaks in the event that the exit condition is not reached as a result of 
+                      #floating point error.
     else:
         end_cut_bounds = bounds
     end = end_cut_bounds.midpoint()
     end_cut = find_end_cut(agent, prefs, start, end, value, epsilon, queries)
     return end_cut
 
+
 def find_end_cut(agent, prefs, start, end, value, epsilon, queries):
+    '''
+    Checks the end cut position is correct and returns the value.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is not None:
         end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon, queries[0])
@@ -480,8 +430,13 @@ def find_end_cut(agent, prefs, start, end, value, epsilon, queries):
         return end_cut
     else:
         return None
+
         
 def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon, queries = None):
+    '''
+    Implements algebraic solution for cut query with variant one
+    after epsilon interval is identified.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_one(agent, prefs, start_bounds, 
@@ -496,7 +451,12 @@ def find_end_cut_variant_one(agent, prefs, start, end, value, epsilon, queries =
     else:
         return None
     
+    
 def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon, queries = None):
+    '''
+    Implements algebraic solution for cut query with variant two
+    after epsilon interval is identified.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     if queries is None:
         queries = intermediate_queries_variant_two(agent, prefs, start_bounds, 
@@ -517,6 +477,9 @@ def find_end_cut_variant_two(agent, prefs, start, end, value, epsilon, queries =
 
 def end_cut_bounds_update(agent, prefs, start, end_cut_bounds, 
                           value, epsilon):
+    '''
+    Updates bounds for binary search.
+    '''
     end_cut = end_cut_bounds.midpoint()
     queried_value = value_query(agent, prefs, start, end_cut, epsilon)
     if queried_value <= value:
@@ -525,9 +488,13 @@ def end_cut_bounds_update(agent, prefs, start, end_cut_bounds,
         end_cut_bounds.upper = end_cut
     return end_cut_bounds
 
+
 def cut_query(agent, prefs, initial_cut, value, epsilon, end_cut = True, 
               bounds = None, queries = None):
-    #Must add functionality that returns if there is no cut.
+    '''
+    Performs a query that finds the associated start or end cut for an 
+    inputted end or start cut and slice value.
+    '''
     if end_cut == True:
         queried_cut = end_cut_query(agent, prefs, initial_cut, value, epsilon, bounds, queries)
     else:
@@ -535,17 +502,10 @@ def cut_query(agent, prefs, initial_cut, value, epsilon, end_cut = True,
     return queried_cut
 
 
-# def bisection_cut_query(agent, prefs, start, end, epsilon):
-#     bisection_cut_bounds = Bounds(start, end)
-#     #TODO
-#     while abs(bisection_cut_bounds.upper - bisection_cut_bounds.lower) > 1e-15:
-#         bisection_cut_bounds = \
-#             bisection_cut_bounds_update(agent, prefs, start, end,
-#                                         bisection_cut_bounds, epsilon)
-#     bisection_cut = bisection_cut_bounds.midpoint()
-#     return bisection_cut
-
 def bisection_cut_query(agent, prefs, start, end, epsilon):
+    '''
+    Performs a query that bisects a slice by value between a start and end cut.
+    '''
     if start == end:
         return start
     bisection_cut_bounds = Bounds(start, end)
@@ -556,12 +516,16 @@ def bisection_cut_query(agent, prefs, start, end, epsilon):
                                         bisection_cut_bounds, epsilon)
         count += 1
         if count >= 52:
-            break
+            break #Breaks in the event that the exit condition is not reached as a result of 
+                  #floating point error.
     bisection_cut = find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon)
     return bisection_cut
 
 def bisection_cut_bounds_update(agent, prefs, start, end, 
                                 bisection_cut_bounds, epsilon):
+    '''
+    Updates cut position for binary search.
+    '''
     bisection_cut = bisection_cut_bounds.midpoint()
     left_segment_value = value_query(agent, prefs, start, bisection_cut, epsilon)
     right_segment_value = value_query(agent, prefs, bisection_cut, end, epsilon)
@@ -570,6 +534,9 @@ def bisection_cut_bounds_update(agent, prefs, start, end,
     return bisection_cut_bounds
 
 def find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon):
+    '''
+    Checks cut positions are correct and returns them if they are.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     bisection_bounds = find_epsilon_interval(bisection_cut_bounds, epsilon)
     bisection_cut = find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, end, epsilon)
@@ -600,6 +567,10 @@ def find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon):
         return None
     
 def find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, end, epsilon):
+    '''
+    Implements an algebraic solution for variant one of the left slice value and variant one of the 
+    right slice value.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     queries_left = intermediate_queries_variant_one(agent, prefs, start_bounds, 
                                                     bisection_bounds, epsilon)
@@ -633,6 +604,10 @@ def find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, en
         return None
     
 def find_bisection_cut_variant_one_two(agent, prefs, start, bisection_bounds, end, epsilon):
+    '''
+    Implements an algebraic solution for variant one of the left slice value and variant two of the 
+    right slice value.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     queries_left = intermediate_queries_variant_one(agent, prefs, start_bounds, 
                                                     bisection_bounds, epsilon)
@@ -664,6 +639,10 @@ def find_bisection_cut_variant_one_two(agent, prefs, start, bisection_bounds, en
         return None
 
 def find_bisection_cut_variant_two_one(agent, prefs, start, bisection_bounds, end, epsilon):
+    '''
+    Implements an algebraic solution for variant two of the left slice value and variant one of the 
+    right slice value.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     queries_left = intermediate_queries_variant_two(agent, prefs, start_bounds, 
                                                     bisection_bounds, epsilon)
@@ -699,6 +678,10 @@ def find_bisection_cut_variant_two_one(agent, prefs, start, bisection_bounds, en
         return None
     
 def find_bisection_cut_variant_two_two(agent, prefs, start, bisection_bounds, end, epsilon):
+    '''
+    Implements an algebraic solution for variant two of the left slice value and variant two of the 
+    right slice value.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start, end, epsilon)
     queries_left = intermediate_queries_variant_two(agent, prefs, start_bounds, 
                                                     bisection_bounds, epsilon)
@@ -733,10 +716,12 @@ def find_bisection_cut_variant_two_two(agent, prefs, start, bisection_bounds, en
 
 #Cut Query Stuff above
 
-
 #Equipartition Stuff Below
 
 def bounds_shift(left_slice_value, right_slice_value, cut_bounds):
+    '''
+    Updates the bounds for a binary search of cut positions.
+    '''
     cut = cut_bounds.midpoint()
     if left_slice_value >= right_slice_value:
         cut_bounds.upper = cut
@@ -747,7 +732,11 @@ def bounds_shift(left_slice_value, right_slice_value, cut_bounds):
 
 def equipartition_cut(prefs, cut_bounds, agent_numbers,
                       epsilon, cut_bounds_update):
-    #TODO
+    '''
+    Old version of the equipartition code that is not used in the website but is
+    still used for the monotone branzei-Nisan variant. Recommend implementing
+    Caching if it is used in future.
+    '''
     while abs(cut_bounds.upper - cut_bounds.lower) > 1e-15:
         cut_bounds = cut_bounds_update(prefs, cut_bounds, agent_numbers, epsilon)
     return cut_bounds.midpoint()
@@ -755,7 +744,11 @@ def equipartition_cut(prefs, cut_bounds, agent_numbers,
 
 def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds, 
                              right_cut_bounds, agents_number, epsilon):
-    #start = timer()
+    '''
+    Old version of the equipartition code that is not used in the website but is
+    still used for the monotone branzei-Nisan variant. Recommend implementing
+    Caching if it is used in future.
+    '''
     left_cut = equipartition_cut(prefs, left_cut_bounds, agents_number, epsilon,
                                  left_cut_bounds_update)
     right_cut= equipartition_cut(prefs, right_cut_bounds, agents_number, epsilon,
@@ -767,13 +760,15 @@ def exact_equipartition_cuts(prefs, left_cut_bounds, middle_cut_bounds,
                                       epsilon, middle_cut_bounds_update)
         equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
     alpha = value_query(0, prefs, 0, left_cut, epsilon)
-    #end = timer()
-    #print(end - start)
     return equipartition, alpha
 
 
 def equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
                                       right_cut_bounds, epsilon):
+    '''
+    Finds intermediate queries to cache for when the epsilon intervals are found
+    for the left, middle, and right cuts in the equipartition for four agents.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(0, 1, epsilon)
     first_slice_queries_one = intermediate_queries_variant_one(0, prefs, start_bounds, 
                                                                left_cut_bounds, epsilon)
@@ -811,7 +806,10 @@ def equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds,
 
 def exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
                                          right_cut_bounds, epsilon):
-    #start = timer()
+    '''
+    Utilises cached queries to find equipartition cut positions for four agents via
+    binary search.
+    '''
     left_cut = left_cut_bounds.midpoint()
     queries = equipartition_queries_four_agents(prefs, left_cut_bounds, middle_cut_bounds, 
                                                 right_cut_bounds, epsilon)
@@ -852,13 +850,14 @@ def exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_boun
     left_cut = left_cut_bounds.midpoint()
     equipartition = FourAgentPortion(left_cut, middle_cut, right_cut)
     alpha = value_query(0, prefs, 0, left_cut, epsilon, queries[0])
-    #end = timer()
-    #print(end - start)
     return equipartition, alpha
     
 
 
 def find_epsilon_interval(bounds, epsilon):
+    '''
+    Finds the epsilon interval that two bounds are sandwiched between.
+    '''
     value_within_interval = bounds.midpoint()
     lower_bound_of_interval = (value_within_interval // epsilon) * epsilon
     upper_bound_of_interval = lower_bound_of_interval + epsilon 
@@ -869,6 +868,10 @@ def find_epsilon_interval(bounds, epsilon):
 def left_cut_bounds_right_segment_value_three_agent(prefs, left_cut, 
                                                     left_segment_value,
                                                     epsilon):
+    '''
+    Old code for the monotone branzei nisan algorithm. Finds the rightmost segment
+    value for a chosen left cut and left segment value for three agents.
+    '''
     right_cut = cut_query(0, prefs, left_cut, left_segment_value, 
                          epsilon, end_cut = True)
     if right_cut is None:
@@ -880,6 +883,10 @@ def left_cut_bounds_right_segment_value_three_agent(prefs, left_cut,
 def left_cut_bounds_right_segment_value_four_agent(prefs, left_cut, 
                                                    left_segment_value,
                                                    epsilon):
+    '''
+    Finds the rightmost segment
+    value for a chosen left cut and left segment value for three agents.
+    '''
     middle_cut = cut_query(0, prefs, left_cut, left_segment_value, 
                                epsilon, end_cut = True)
     if middle_cut is None:
@@ -893,6 +900,10 @@ def left_cut_bounds_right_segment_value_four_agent(prefs, left_cut,
 
 
 def left_cut_bounds_update(prefs, left_cut_bounds, agents_number, epsilon):
+    '''
+    Updates left cut position in an attempt to generate equal valued left segment
+    and right segment values.
+    '''
     left_cut = left_cut_bounds.midpoint()
     left_segment_value = value_query(0, prefs, 0, left_cut, epsilon)
     if agents_number == 3:
@@ -911,6 +922,9 @@ def left_cut_bounds_update(prefs, left_cut_bounds, agents_number, epsilon):
 
 
 def middle_cut_bounds_update(prefs, middle_cut_bounds, agents_number, epsilon):
+    '''
+    Updates the middle cut bounds for the equipartition binary search.
+    '''
     middle_cut = middle_cut_bounds.midpoint()
     left_cut = bisection_cut_query(0, prefs, 0, middle_cut, epsilon)
     right_cut = bisection_cut_query(0, prefs, middle_cut, 1, epsilon)
@@ -924,6 +938,10 @@ def middle_cut_bounds_update(prefs, middle_cut_bounds, agents_number, epsilon):
 def right_cut_bounds_left_segment_value_three_agent(prefs, right_cut, 
                                                     right_segment_value,
                                                     epsilon):
+    '''
+    Old code for the monotone branzei nisan algorithm. Finds the leftmost segment
+    value for a chosen right cut and right segment value for three agents.
+    '''
     left_cut = cut_query(0, prefs, right_cut, right_segment_value, 
                         epsilon, end_cut = False)
     if left_cut is None:
@@ -935,6 +953,10 @@ def right_cut_bounds_left_segment_value_three_agent(prefs, right_cut,
 def right_cut_bounds_left_segment_value_four_agent(prefs, right_cut, 
                                                    right_segment_value,
                                                    epsilon):
+    '''
+    Finds the leftmost segment
+    value for a chosen right cut and right segment value for three agents.
+    '''
     middle_cut = cut_query(0, prefs, right_cut, right_segment_value, 
                         epsilon, end_cut = False)
     if middle_cut is None:
@@ -948,6 +970,10 @@ def right_cut_bounds_left_segment_value_four_agent(prefs, right_cut,
 
 
 def right_cut_bounds_update(prefs, right_cut_bounds, agents_number, epsilon):
+    '''
+    Updates right cut position in an attempt to generate equal valued left segment
+    and right segment values.
+    '''
     right_cut = right_cut_bounds.midpoint()
     right_segment_value = value_query(0, prefs, right_cut, 1, epsilon)
     if agents_number == 3:
@@ -966,7 +992,9 @@ def right_cut_bounds_update(prefs, right_cut_bounds, agents_number, epsilon):
 
 
 def find_cut_epsilon_interval(prefs, agents_number, epsilon, cut_bounds_update):
-    #make agents_number optional.
+    '''
+    Finds epsilon interval of a cut according to the inputted cut bound update function.
+    '''
     cut_bounds = Bounds(0, 1)
     count = 0
     while (cut_bounds.upper // epsilon) != (cut_bounds.lower // epsilon):
@@ -979,7 +1007,10 @@ def find_cut_epsilon_interval(prefs, agents_number, epsilon, cut_bounds_update):
 
 
 def compute_equipartition(prefs, agents_number, epsilon):
-    #start = timer()
+    '''
+    Finds the epsilon interval of the left, right, and optionally middle cut for the 
+    equipartition. Then finds the exact positions via caching.
+    '''
     left_cut_bounds = find_cut_epsilon_interval(prefs, agents_number, epsilon,
                                                 left_cut_bounds_update)
     if agents_number == 3:
@@ -1000,18 +1031,23 @@ def compute_equipartition(prefs, agents_number, epsilon):
         equipartition = \
             exact_equipartition_cuts_four_agents(prefs, left_cut_bounds, middle_cut_bounds,
                                                  right_cut_bounds, epsilon)
-    #end = timer()
-    #print(end - start)
     return equipartition
 
 #Equipartition stuff above
 
 def check_valid_agents_value(agents_number):
+    '''
+    Checks that the agents value is 3 or 4.
+    '''
     assert agents_number == 3 or agents_number == 4, \
         "invalid number of agents. Please input either 3 or 4."
     
-#slice value stuff below. Could be improved."
+#slice value stuff below. "
+
 def find_middle_slice_values(agent, prefs, division, agents_number, epsilon):
+    '''
+    Finds slice 2 in the three agent case and slice 2 and 3 in the four agent case.
+    '''
     if agents_number == 3:
         middle_slice_values = np.array([value_query(agent, prefs, division.left, 
                                                     division.right, epsilon)])
@@ -1025,6 +1061,9 @@ def find_middle_slice_values(agent, prefs, division, agents_number, epsilon):
 
 
 def slice_values(agent, prefs, division, agents_number, epsilon):
+    '''
+    Finds the slice values for an inputted agent and division.
+    '''
     check_valid_agents_value(agents_number)
     left_slice_value = np.array([value_query(agent, prefs, 0, division.left, 
                                              epsilon)])
@@ -1040,12 +1079,19 @@ def slice_values(agent, prefs, division, agents_number, epsilon):
 #3 agent invariant checks below. need to add isclose
 
 def check_valid_division_three_agent(division):
+    '''
+    Checks that the returned division has the left cut to the left of the right cut.
+    '''
     if (division.right >= division.left):
         return True
     else:
         return False
+
     
 def invariant_three_agent_check(slice, prefs, division, epsilon):
+    '''
+    Old code for monotone branzei nisan. Checks that agents 2 and 3 prefer the same slice.
+    '''
     agent_one_slice_values = slice_values(1, prefs, division, 3, epsilon)
     agent_two_slice_values = slice_values(2, prefs, division, 3, epsilon)
     
@@ -1057,6 +1103,9 @@ def invariant_three_agent_check(slice, prefs, division, epsilon):
     
 
 def invariant_three_agents_slice_one_preferred(prefs, alpha, epsilon):
+    '''
+    Old code for monotone branzei nisan. Checks that agents 2 and 3 prefer the slice one.
+    '''
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
     if right_cut is None:
         return False
@@ -1072,6 +1121,9 @@ def invariant_three_agents_slice_one_preferred(prefs, alpha, epsilon):
     
 
 def invariant_three_agents_slice_two_preferred(prefs, alpha, epsilon):
+    '''
+    Old code for monotone branzei nisan. Checks that agents 2 and 3 prefer the slice two.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon)
     if left_cut is None:
         return False
@@ -1086,6 +1138,9 @@ def invariant_three_agents_slice_two_preferred(prefs, alpha, epsilon):
 
 
 def invariant_three_agents_slice_three_preferred(prefs, alpha, epsilon):
+    '''
+    Old code for monotone branzei nisan. Checks that agents 2 and 3 prefer the slice three.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon)
     if left_cut is None:
         return False
@@ -1100,6 +1155,9 @@ def invariant_three_agents_slice_three_preferred(prefs, alpha, epsilon):
 
 
 def check_invariant_three_agents(prefs, alpha, epsilon):
+    '''
+    Old code for the monotone branzei nisan. Checks if the invariant is true for Branzei nisan.
+    '''
     if invariant_three_agents_slice_one_preferred(prefs, alpha, epsilon) == True:
         return True, 1
     if invariant_three_agents_slice_two_preferred(prefs, alpha, epsilon) == True:
@@ -1111,7 +1169,10 @@ def check_invariant_three_agents(prefs, alpha, epsilon):
 
 
 def division_three_agents(prefs, alpha, epsilon):
-    #Can be refactored out.
+    '''
+    Old code for monotone branzei nisan. Checks which slice two agents prefer. To
+    be returned to the website for the information in the results window.
+    '''
     if check_invariant_three_agents(prefs, alpha, epsilon)[1] == 1:
         right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
         left_cut = cut_query(0, prefs, right_cut, alpha, 
@@ -1134,6 +1195,10 @@ def division_three_agents(prefs, alpha, epsilon):
 
 def check_unique_preferences_three_agent(agent_one_slice_values,
                                          agent_two_slice_values):
+    '''
+    Old code for the monotone branzei nisan algorithm. Checks if the division is approximately
+    envy-free after equipartition.
+    '''
     for i in range(3):
         for j in range(3):
             if j == i:
@@ -1148,6 +1213,10 @@ def check_unique_preferences_three_agent(agent_one_slice_values,
 
 def check_equipartition_envy_free_three_agents(prefs, alpha, 
                                                agents_number, epsilon):
+    '''
+    Old code for the monotone branzei nisan algorithm. Checks if the division is approximately
+    envy-free after equipartition.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon)
     right_cut = cut_query(0, prefs, left_cut, alpha, epsilon)
     division = ThreeAgentPortion(left_cut,right_cut)
@@ -1163,6 +1232,9 @@ def check_equipartition_envy_free_three_agents(prefs, alpha,
 def check_unique_preferences_four_agent(agent_one_slice_values,
                                         agent_two_slice_values,
                                         agent_three_slice_values):
+    '''
+    Checks if the division is approximately envy-free after equipartition.
+    '''
     for i in range(4):
         for j in range(4):
             for k in range(4):
@@ -1179,6 +1251,9 @@ def check_unique_preferences_four_agent(agent_one_slice_values,
 
 
 def check_equipartition_envy_free_four_agents(prefs, alpha, agents_number, epsilon):
+    '''
+    Checks if the division is approximately envy-free after equipartition.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon)
     middle_cut = cut_query(0, prefs, left_cut, alpha, epsilon)
     right_cut = cut_query(0, prefs, middle_cut, alpha, epsilon)
@@ -1196,6 +1271,9 @@ def check_equipartition_envy_free_four_agents(prefs, alpha, agents_number, epsil
 #condition A checks below.
 
 def check_valid_division(division):
+    '''
+    Checks that the division has the right cut after the middle after the left.
+    '''
     if ((division.right >= division.middle) and (division.middle >= division.left)):
         return True
     else:
@@ -1203,6 +1281,9 @@ def check_valid_division(division):
 
 
 def condition_a_check(slice, prefs, alpha, division, epsilon):
+    '''
+    Checks if condition A of the invariant is true for the Hollender-Rubinstein algorithm.
+    '''
     agents_number = 4
     slices_number = 4
     agent_slice_values = np.zeros((agents_number,slices_number))
@@ -1222,6 +1303,9 @@ def condition_a_check(slice, prefs, alpha, division, epsilon):
             
 
 def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if two or more agents prefer slice one for the Hollender-Rubinstein algorithm.
+    '''
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
     if right_cut is None:
         return False
@@ -1245,6 +1329,9 @@ def condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division = Fal
     
 
 def condition_a_slice_two_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if two or more agents prefer slice two for the Hollender-Rubinstein algorithm.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
     if left_cut is None:
         return False
@@ -1268,6 +1355,9 @@ def condition_a_slice_two_preferred(prefs, alpha, epsilon, return_division = Fal
     
 
 def condition_a_slice_three_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if two or more agents prefer slice three for the Hollender-Rubinstein algorithm.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
     if left_cut is None:
         return False
@@ -1291,6 +1381,9 @@ def condition_a_slice_three_preferred(prefs, alpha, epsilon, return_division = F
     
 
 def condition_a_slice_four_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if two or more agents prefer slice four for the Hollender-Rubinstein algorithm.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
     if left_cut is None:
         return False
@@ -1314,6 +1407,9 @@ def condition_a_slice_four_preferred(prefs, alpha, epsilon, return_division = Fa
     
 
 def check_condition_a(prefs, alpha, epsilon, return_division = False):
+    '''
+    Runs checks on condition A cases and returns true or false..
+    '''
     if condition_a_slice_one_preferred(prefs, alpha, epsilon) == True:
         return condition_a_slice_one_preferred(prefs, alpha, epsilon, return_division)
     if condition_a_slice_two_preferred(prefs, alpha, epsilon) == True:
@@ -1330,7 +1426,9 @@ def check_condition_a(prefs, alpha, epsilon, return_division = False):
 #condition B checks below.
 
 def condition_b_check(slices, prefs, alpha, division, epsilon):
-    #remove doubles
+    '''
+    Checks if condition B of the invariant is true for the Hollender-Rubinstein algorithm.
+    '''
     agents_number = 4
     slices_number = 4
     agent_slice_values = np.zeros((agents_number,slices_number))
@@ -1355,6 +1453,9 @@ def condition_b_check(slices, prefs, alpha, division, epsilon):
     
 
 def condition_b_slice_one_two_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if slices one and two are each preferred by at least two agents.
+    '''
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
     if right_cut is None:
         return False
@@ -1380,6 +1481,9 @@ def condition_b_slice_one_two_preferred(prefs, alpha, epsilon, return_division =
 
 
 def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if slices two and three are each preferred by at least two agents.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
     if left_cut is None:
         return False
@@ -1407,6 +1511,9 @@ def condition_b_slice_two_three_preferred(prefs, alpha, epsilon, return_division
 
 
 def condition_b_slice_three_four_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if slices three and four are each preferred by at least two agents.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
     if left_cut is None:
         return False
@@ -1432,6 +1539,9 @@ def condition_b_slice_three_four_preferred(prefs, alpha, epsilon, return_divisio
 
 
 def condition_b_adjacent_slices_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if two adjacent slices are each preferred by at least two agents.
+    '''
     if condition_b_slice_one_two_preferred(prefs, alpha, epsilon) == True:
         return condition_b_slice_one_two_preferred(prefs, alpha, epsilon, return_division)
     if condition_b_slice_two_three_preferred(prefs, alpha, epsilon) == True:
@@ -1445,6 +1555,10 @@ def condition_b_adjacent_slices_preferred(prefs, alpha, epsilon, return_division
 def leftmost_cut_bounds_one_apart_update(agent, prefs, leftmost_cut_bounds, 
                                          alpha, left_bound, right_bound,
                                          epsilon):
+    '''
+    Updates the position of the leftmost nontrivial cut positionfor the case where 
+    slices that are one apart are being checked.
+    '''
     leftmost_cut = leftmost_cut_bounds.midpoint()
     left_segment_value = value_query(agent, prefs, left_bound, leftmost_cut,
                                      epsilon)
@@ -1463,6 +1577,10 @@ def leftmost_cut_bounds_one_apart_update(agent, prefs, leftmost_cut_bounds,
 def rightmost_cut_bounds_one_apart_update(agent, prefs, rightmost_cut_bounds, 
                                           alpha, left_bound, right_bound, 
                                           epsilon):
+    '''
+    Updates the position of the rightmost nontrivial cut positionfor the case where 
+    slices that are one apart are being checked.
+    '''
     rightmost_cut = rightmost_cut_bounds.midpoint()
     right_segment_value = value_query(agent, prefs, rightmost_cut, 
                                       right_bound, epsilon)
@@ -1478,24 +1596,12 @@ def rightmost_cut_bounds_one_apart_update(agent, prefs, rightmost_cut_bounds,
     return rightmost_cut_bounds
 
 
-# def non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, left_bound, 
-#                                 right_bound, epsilon, cut_bounds_update):
-#     cut_bounds = Bounds(left_bound, right_bound)
-#     while (cut_bounds.upper // epsilon) != (cut_bounds.lower // epsilon):
-#         cut_bounds = \
-#             cut_bounds_update(indifferent_agent, prefs, 
-#                               cut_bounds, alpha, left_bound,
-#                               right_bound, epsilon)
-#     cut_epsilon_interval = find_epsilon_interval(cut_bounds, epsilon)
-#     #TODO
-#     while abs(cut_bounds.upper - cut_bounds.lower) > 1e-15:
-#         cut_bounds = cut_bounds_update(indifferent_agent, prefs, 
-#                                        cut_bounds, alpha, left_bound,
-#                                        right_bound, epsilon)
-#     return cut_bounds.midpoint()
-
 def non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, left_bound, 
                                 right_bound, epsilon, cut_bounds_update):
+    '''
+    Updates the nontrivial cut positions for the case where 
+    slices that are non-adjacent are being checked.
+    '''
     cut_bounds = Bounds(left_bound, right_bound)
     count = 0
     while (cut_bounds.upper // epsilon) != (cut_bounds.lower // epsilon):
@@ -1510,23 +1616,11 @@ def non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, left_bound,
     return cut_epsilon_interval
 
 
-# def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound, 
-#                          right_bound, epsilon):
-#     start = timer()
-#     leftmost_unknown_cut = \
-#         non_adjacent_slice_cuts_update(indifferent_agent, prefs, 
-#                                        alpha, left_bound, right_bound, epsilon,
-#                                        leftmost_cut_bounds_one_apart_update)
-#     rightmost_unknown_cut = \
-#         non_adjacent_slice_cuts_update(indifferent_agent, prefs, 
-#                                        alpha, left_bound, right_bound, epsilon,
-#                                        rightmost_cut_bounds_one_apart_update)
-#     end = timer()
-#     print(end - start)
-#     return leftmost_unknown_cut, rightmost_unknown_cut
-
 def one_apart_queries(indifferent_agent, prefs, start_bound, leftmost_cut_bounds, 
                       rightmost_cut_bounds, end_bound, epsilon):
+    '''
+    Finds the queries for investigating slices that are one apart for caching purposes.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(start_bound, end_bound, epsilon)
     first_slice_queries_one = intermediate_queries_variant_one(indifferent_agent, prefs, start_bounds, 
                                                                leftmost_cut_bounds, epsilon)
@@ -1553,8 +1647,13 @@ def one_apart_queries(indifferent_agent, prefs, start_bound, leftmost_cut_bounds
     ]
     return queries
 
+
 def one_apart_slice_cuts_exact(indifferent_agent, prefs, alpha, left_bound, right_bound, 
                                leftmost_cut_bounds, rightmost_cut_bounds, epsilon):
+    '''
+    Finds the exact positions of cuts given their epsilon interval using caching for the 
+    case of slices one apart.
+    '''
     queries = one_apart_queries(indifferent_agent, prefs, left_bound, leftmost_cut_bounds, 
                                 rightmost_cut_bounds, right_bound, epsilon)
     leftmost_cut = leftmost_cut_bounds.midpoint()
@@ -1579,7 +1678,10 @@ def one_apart_slice_cuts_exact(indifferent_agent, prefs, alpha, left_bound, righ
 
 def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound, 
                           right_bound, epsilon):
-    #start = timer()
+    '''
+    Returns the positions of non trivial cuts in the case where two slices one apart are
+    being investigated.
+    '''
     leftmost_unknown_cut_bounds = \
         non_adjacent_slice_cuts_update(indifferent_agent, prefs, 
                                        alpha, left_bound, right_bound, epsilon,
@@ -1594,12 +1696,13 @@ def one_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound,
                                    leftmost_unknown_cut_bounds,
                                    rightmost_unknown_cut_bounds,  
                                    epsilon)
-    #end = timer()
-    #print(end - start)
     return leftmost_unknown_cut, rightmost_unknown_cut
 
 
 def condition_b_slice_one_three_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if slices one and three are each preferred by at least two agents.
+    '''
     right_cut = cut_query(0, prefs, 1, alpha, epsilon, end_cut = False)
     if right_cut is None:
         return False
@@ -1623,6 +1726,9 @@ def condition_b_slice_one_three_preferred(prefs, alpha, epsilon, return_division
 
 
 def condition_b_slice_two_four_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if slices two and four are each preferred by at least two agents.
+    '''
     left_cut = cut_query(0, prefs, 0, alpha, epsilon, end_cut = True)
     if left_cut is None:
         return False
@@ -1646,6 +1752,9 @@ def condition_b_slice_two_four_preferred(prefs, alpha, epsilon, return_division 
 
 
 def condition_b_one_apart_slices_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if two slices one apart are each preferred by at least two agents.
+    '''
     if condition_b_slice_one_three_preferred(prefs, alpha, epsilon) == True:
         return condition_b_slice_one_three_preferred(prefs, alpha, epsilon, return_division)
     if condition_b_slice_two_four_preferred(prefs, alpha, epsilon) == True:
@@ -1657,6 +1766,10 @@ def condition_b_one_apart_slices_preferred(prefs, alpha, epsilon, return_divisio
 def left_cut_bounds_two_apart_update(agent, prefs, 
                                      left_cut_bounds, alpha, left_bound,
                                      right_bound, epsilon):
+    '''
+    Updates the position of the left cut position for the case where 
+    slices that are two apart are being checked.
+    '''
     left_cut = left_cut_bounds.midpoint()
     middle_cut = cut_query(0, prefs, left_cut, alpha, epsilon, end_cut = True)
     if middle_cut is None:
@@ -1676,6 +1789,10 @@ def left_cut_bounds_two_apart_update(agent, prefs,
 def middle_cut_bounds_two_apart_update(agent, prefs, 
                                        middle_cut_bounds, alpha, left_bound,
                                        right_bound, epsilon):
+    '''
+    Updates the position of the middle cut position for the case where 
+    slices that are two apart are being checked.
+    '''
     middle_cut = middle_cut_bounds.midpoint()
     left_cut = cut_query(0, prefs, middle_cut, alpha, epsilon, end_cut = False)
     if left_cut is None:
@@ -1695,6 +1812,10 @@ def middle_cut_bounds_two_apart_update(agent, prefs,
 def right_cut_bounds_two_apart_update(agent, prefs, 
                                       right_cut_bounds, alpha, left_bound,
                                       right_bound, epsilon):
+    '''
+    Updates the position of the right cut position for the case where 
+    slices that are two apart are being checked.
+    '''
     right_cut = right_cut_bounds.midpoint()
     middle_cut = cut_query(0, prefs, right_cut, alpha, epsilon, end_cut = False)
     if middle_cut is None:
@@ -1711,21 +1832,11 @@ def right_cut_bounds_two_apart_update(agent, prefs,
     return right_cut_bounds
 
 
-# def two_apart_slice_cuts(indifferent_agent, prefs, alpha, left_bound, 
-#                          right_bound, epsilon):
-#     left_cut = \
-#         non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, 0, 1, 
-#                                        epsilon, left_cut_bounds_two_apart_update)
-#     middle_cut = \
-#         non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, 0, 1, 
-#                                        epsilon, middle_cut_bounds_two_apart_update)
-    
-#     right_cut = \
-#         non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, 0, 1, 
-#                                        epsilon, right_cut_bounds_two_apart_update)
-#     return left_cut, middle_cut, right_cut
 def two_apart_queries_four_agents(indifferent_agent, prefs, left_cut_bounds,
                                   middle_cut_bounds, right_cut_bounds, epsilon):
+    '''
+    Finds the queries for investigating slices that are two apart for caching purposes.
+    '''
     start_bounds, end_bounds = piecewise_linear_bounds(0, 1, epsilon)
     first_slice_queries_one = intermediate_queries_variant_one(indifferent_agent, prefs, start_bounds, 
                                                                left_cut_bounds, epsilon)
@@ -1760,8 +1871,13 @@ def two_apart_queries_four_agents(indifferent_agent, prefs, left_cut_bounds,
     ]
     return queries
 
+
 def two_apart_slice_cuts_exact(indifferent_agent, prefs, alpha, left_cut_bounds,
                                middle_cut_bounds, right_cut_bounds, epsilon):
+    '''
+    Finds the exact positions of cuts given their epsilon interval using caching for the 
+    case of slices two apart.
+    '''
     queries = two_apart_queries_four_agents(indifferent_agent, prefs, left_cut_bounds,
                                             middle_cut_bounds, right_cut_bounds, epsilon)
     left_cut = left_cut_bounds.midpoint()
@@ -1796,6 +1912,9 @@ def two_apart_slice_cuts_exact(indifferent_agent, prefs, alpha, left_cut_bounds,
     
 
 def two_apart_slice_cuts(indifferent_agent, prefs, alpha, epsilon):
+    '''
+    Finds the cut positions for case of slices two apart.
+    '''
     left_cut_bounds = \
         non_adjacent_slice_cuts_update(indifferent_agent, prefs, alpha, 0, 1, 
                                        epsilon, left_cut_bounds_two_apart_update)
@@ -1816,6 +1935,9 @@ def two_apart_slice_cuts(indifferent_agent, prefs, alpha, epsilon):
 
 
 def condition_b_slice_one_four_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if slices one and four are each preferred by at least two agents.
+    '''
     for i in range(1,4):
         left_cut, middle_cut, right_cut = \
             two_apart_slice_cuts(i, prefs, alpha, epsilon)
@@ -1836,6 +1958,9 @@ def condition_b_slice_one_four_preferred(prefs, alpha, epsilon, return_division 
 
 
 def condition_b_two_apart_slices_preferred(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if two slices two apart are each preferred by at least two agents.
+    '''
     if condition_b_slice_one_four_preferred(prefs, alpha, epsilon) == True:
         return condition_b_slice_one_four_preferred(prefs, alpha, epsilon, return_division)
     else:
@@ -1843,6 +1968,9 @@ def condition_b_two_apart_slices_preferred(prefs, alpha, epsilon, return_divisio
     
 
 def check_condition_b(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if condition B is true for the Hollender-Rubinstein algorithm.
+    '''
     if condition_b_adjacent_slices_preferred(prefs, alpha, epsilon) == True:
         return condition_b_adjacent_slices_preferred(prefs, alpha, epsilon, return_division)
     if condition_b_one_apart_slices_preferred(prefs, alpha, epsilon) == True:
@@ -1855,16 +1983,21 @@ def check_condition_b(prefs, alpha, epsilon, return_division = False):
 #condition B stuff above
 
 def check_invariant_four_agents(prefs, alpha, epsilon, return_division = False):
+    '''
+    Checks if the invariant is true for the Hollender-Rubinstein algorithm.
+    '''
     if check_condition_a(prefs, alpha, epsilon) == True:
-        #print("a")
         return check_condition_a(prefs, alpha, epsilon, return_division)
     elif check_condition_b(prefs, alpha, epsilon) == True:
-        #print("b")
         return check_condition_b(prefs, alpha, epsilon, return_division)
     else:
         return False
+
     
 def check_envy_free_four_agent(prefs, division, epsilon):
+    '''
+    Checks if a division is envy-free for four agents.
+    '''
     agent_slice_values = np.zeros((4,4))
     for i in range(4):
         agent_slice_values[i] = slice_values(i, prefs, division, 4, epsilon)
@@ -1880,56 +2013,7 @@ def check_envy_free_four_agent(prefs, division, epsilon):
                         np.isclose(agent_slice_values[3][k], np.max(agent_slice_values[3]), rtol = 0, atol = epsilon / 12):
                             return True
     return False
-    
-# def assign_slices(division, prefs, agents_number, epsilon, additive = False):
-#     if agents_number == 3:
-#         agents = [0,1,2]
-#         slices = [1,2,3]
-#     if  agents_number == 4:
-#         agents = [0,1,2,3]
-#         slices = [1,2,3,4]
-#     agent_slice_values = np.zeros((len(agents),len(slices)))
-#     for i in range(agents_number):
-#         if additive == False:
-#             agent_slice_values[i] = slice_values(i, prefs, division, agents_number, epsilon)
-#         else:
-#             agent_slice_values[i] = slice_values_additive(i, prefs, division, epsilon)
-#     assignments = {}  # To store the assignments of slices to agents
 
-#     while len(agents) > 1:
-#         max_difference = -1
-#         chosen_agent = None
-#         chosen_slice = None
-
-#         # Find the agent with the maximum difference between their top two best slices
-#         for agent in agents:
-#             # Sort the agent's valuations and get the indices of the top two values
-#             valuations = pd.DataFrame({"slices": slices,
-#                                        "values": agent_slice_values[agent]})
-#             sorted_valuations = valuations.sort_values(by ='values' , ascending=False).reset_index(drop=True)
-#             top_value = sorted_valuations["values"][0]
-#             second_value = sorted_valuations["values"][1]
-#             difference = top_value - second_value
-#             #value_for_print = sorted_valuations["slices"][0]
-
-#             if difference > max_difference:
-#                 max_difference = difference
-#                 chosen_agent = agent
-#                 chosen_slice = sorted_valuations["slices"][0]
-
-#         # Assign the chosen slice to the chosen agent
-#         assignments[int(chosen_slice)] = chosen_agent
-
-#         # Remove the chosen agent and slice
-#         agents.remove(chosen_agent)
-#         slice_index = slices.index(chosen_slice)
-#         slices.remove(chosen_slice)
-#         agent_slice_values = [np.concatenate([val[:slice_index], val[slice_index+1:]]) for val in agent_slice_values]
-
-#     # Assign the remaining slice to the remaining agent
-#     assignments[int(slices[0])] = agents[0]
-
-#     return assignments
 
 def assign_slices(division, prefs, agents_number, epsilon, additive = False):
     '''
@@ -1955,7 +2039,11 @@ def assign_slices(division, prefs, agents_number, epsilon, additive = False):
         assignments[j] = int(np.where(slice_assignments==(j-1))[0][0])
     return assignments
 
+
 def raw_division(division, cakeSize, agents_number):
+    '''
+    Reverts division to the interval inputted by the user.
+    '''
     left_cut = float(division.left * cakeSize)
     right_cut = float(division.right * cakeSize)
     if agents_number == 3:
@@ -1967,7 +2055,10 @@ def raw_division(division, cakeSize, agents_number):
     
 
 def branzei_nisan(raw_prefs, cake_size):
-    #Need to implement specifics in line with four agent algo
+    '''
+    This is a version of Branzei Nisan that is written similarly to the Hollender-Rubinstein
+    algorithm. For the version implemented on the site, see branzei_nisan_additive.
+    '''
     prefs = one_lipschitz(raw_prefs, cake_size)
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 3, epsilon)
     if check_equipartition_envy_free_three_agents(prefs, alpha_lower_bound, 3,
@@ -1997,20 +2088,22 @@ def branzei_nisan(raw_prefs, cake_size):
 
 
 def hollender_rubinstein(raw_prefs, cake_size):
+    '''
+    The hollender-rubinstein algorithm for finding an envy-free division for four agents.
+    Returns jsonified values that can be used by the Fair Slice website.
+    '''
     prefs = one_lipschitz(raw_prefs, cake_size)
     equipartition, alpha_lower_bound = compute_equipartition(prefs, 4, epsilon)
     if check_equipartition_envy_free_four_agents(prefs, alpha_lower_bound, 4,
                                                  epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 4, epsilon)
         raw_envy_free_division = raw_division(equipartition, cake_size, 4)
-        print("done")
-        return(0)
-        # return jsonify({'equipartition': raw_envy_free_division,
-        #                 'division': 0,
-        #                 'assignment': slice_assignments,
-        #                 'condition': [0],
-        #                 'slices': 0,
-        #                 'indifferent_agent': 0})
+        return jsonify({'equipartition': raw_envy_free_division,
+                        'division': 0,
+                        'assignment': slice_assignments,
+                        'condition': [0],
+                        'slices': 0,
+                        'indifferent_agent': 0})
     alpha_upper_bound = 1
     alpha_bounds = Bounds(alpha_lower_bound, alpha_upper_bound)
     while abs(alpha_bounds.upper - alpha_bounds.lower) > ((epsilon)**4)/12:
@@ -2019,7 +2112,6 @@ def hollender_rubinstein(raw_prefs, cake_size):
             alpha_bounds.lower = alpha
         else:
             alpha_bounds.upper = alpha
-    x = 1
     envy_free_division, info = check_invariant_four_agents(prefs, alpha_bounds.lower, 
                                                            epsilon, return_division = True)
     if check_envy_free_four_agent(prefs, envy_free_division, epsilon) == True:
@@ -2029,17 +2121,18 @@ def hollender_rubinstein(raw_prefs, cake_size):
     raw_equipartition = raw_division(equipartition, cake_size, 4)
     slice_assignments = assign_slices(envy_free_division, prefs, 4, epsilon)
     raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
-    print("done")
-    # return jsonify({'equipartition': raw_equipartition,
-    #                 'division': raw_envy_free_division,
-    #                 'assignment': slice_assignments,
-    #                 'condition': info['condition'].to_list(),
-    #                 'slices': info['slices'].to_list(),
-    #                 'indifferent_agent': info['indifferent_agent'].to_list()})
-    #return raw_envy_free_division, slice_assignments
+    return jsonify({'equipartition': raw_equipartition,
+                    'division': raw_envy_free_division,
+                    'assignment': slice_assignments,
+                    'condition': info['condition'].to_list(),
+                    'slices': info['slices'].to_list(),
+                    'indifferent_agent': info['indifferent_agent'].to_list()})
 
 
 def hungriness_additive(prefs, epsilon):
+    '''
+    Modifies the valuation function to be hungry.
+    '''
     for agents in prefs:
         hungriness_check = True
         for segments in agents:
@@ -2053,18 +2146,10 @@ def hungriness_additive(prefs, epsilon):
     return prefs
 
 
-# def value_query_hungry_additive(agent, prefs, end, epsilon):
-#     initial_value = value_query_initial(agent, prefs, 0, end)
-#     value = (1 - epsilon / 2) * initial_value  + epsilon / 2
-#     return value
-
-# def value_query_additive(agent, prefs, start, end, epsilon):
-#     initial_value = value_query_initial(agent, prefs, start, end)
-#     value = (1 - epsilon / 2) * initial_value  + epsilon / 2
-#     return value
-
-
 def value_query_piecewise_additive(agent, prefs, end, epsilon):
+    '''
+    Modifies the value query to a piecewise-constant value according to Branzei-nisan.
+    '''
     check = end % epsilon
     assert np.isclose(check, 0, rtol = 0, atol= 1e-15) or \
            np.isclose(check, epsilon, rtol = 0, atol= 1e-15),\
@@ -2075,8 +2160,12 @@ def value_query_piecewise_additive(agent, prefs, end, epsilon):
     else:
         final_value = (initial_value // epsilon) * epsilon + epsilon
         return final_value
+
     
 def value_query_interpolated_additive(agent, prefs, end, epsilon):
+    '''
+    Interpolates the piecewise-constant value according to Branzei-nisan.
+    '''
     check = end % epsilon
     if np.isclose(check, 0, rtol = 0, atol= 1e-15) or \
         np.isclose(check, epsilon, rtol = 0, atol= 1e-15):
@@ -2091,7 +2180,12 @@ def value_query_interpolated_additive(agent, prefs, end, epsilon):
         value = value_left + (value_right - value_left) * interpolation_constant
         return value
 
+
 def value_query_additive(agent, prefs, start, end, epsilon):
+    '''
+    Leverages additive valuation function to allow subtraction of two value queries for
+    0 to start and 0 to end to get a value from start to end.
+    '''
     component_one = value_query_interpolated_additive(agent, prefs, start, epsilon)
     component_two = value_query_interpolated_additive(agent, prefs, end, epsilon)
     value = component_two - component_one
@@ -2099,6 +2193,9 @@ def value_query_additive(agent, prefs, start, end, epsilon):
 
 
 def end_cut_query_additive(agent, prefs, start, value, epsilon):
+    '''
+    Finds the end cut given a start cut and final value by branzei nisan's procedure.
+    '''
     end_cut_bounds = Bounds(start, 1)
     while (end_cut_bounds.upper - end_cut_bounds.lower) > epsilon / 200:
         end_cut_bounds = end_cut_bounds_update_additive(agent, prefs, start, end_cut_bounds, 
@@ -2106,8 +2203,12 @@ def end_cut_query_additive(agent, prefs, start, value, epsilon):
     end_cut = end_cut_bounds.midpoint()
     return end_cut
 
+
 def end_cut_bounds_update_additive(agent, prefs, start, end_cut_bounds, 
                                    value, epsilon):
+    '''
+    Updates the end cut bounds for the binary search.
+    '''
     end_cut = end_cut_bounds.midpoint()
     queried_value = value_query_additive(agent, prefs, start, end_cut, epsilon)
     if queried_value <= value:
@@ -2116,7 +2217,11 @@ def end_cut_bounds_update_additive(agent, prefs, start, end_cut_bounds,
         end_cut_bounds.upper = end_cut
     return end_cut_bounds
 
+
 def start_cut_query_additive(agent, prefs, end, value, epsilon):
+    '''
+    Finds the start cut given a end cut and final value by branzei nisan's procedure.
+    '''
     start_cut_bounds = Bounds(0, end)
     while (start_cut_bounds.upper - start_cut_bounds.lower) > epsilon / 200:
         start_cut_bounds = start_cut_bounds_update_additive(agent, prefs, end, start_cut_bounds, 
@@ -2127,6 +2232,9 @@ def start_cut_query_additive(agent, prefs, end, value, epsilon):
 
 def start_cut_bounds_update_additive(agent, prefs, end, start_cut_bounds, 
                             value, epsilon):
+    '''
+    Updates the start cut bounds for the binary search.
+    '''
     start_cut = start_cut_bounds.midpoint()
     queried_value = value_query_additive(agent, prefs, start_cut, end, epsilon)
     if queried_value <= value:
@@ -2137,7 +2245,10 @@ def start_cut_bounds_update_additive(agent, prefs, end, start_cut_bounds,
 
 
 def cut_query_additive(agent, prefs, initial_cut, value, epsilon, end_cut = True):
-    #Must add functionality that returns if there is no cut.
+    '''
+    Returns a end or start cut position to complete a slice of an inputted value 
+    given a start or end cut position.
+    '''
     if end_cut == True:
         queried_cut = end_cut_query_additive(agent, prefs, initial_cut, value, epsilon)
     else:
@@ -2146,14 +2257,19 @@ def cut_query_additive(agent, prefs, initial_cut, value, epsilon, end_cut = True
 
 
 def bisection_cut_query_additive(agent, prefs, start, end, epsilon):
+    '''
+    Finds a cut that bisects a slice by value given a start and end cut position.
+    '''
     half_value = value_query_additive(agent, prefs, start,
                                       end, epsilon) / 2
     mid_cut = cut_query_additive(agent, prefs, start, half_value, epsilon, end_cut = True)
     return mid_cut
 
 
-
 def compute_equipartition_additive(prefs, epsilon):
+    '''
+    Returns a division that cuts a cake into thirds for the agent with the rightmost right cut.
+    '''
     agents = [0,1,2]
     rightmost_mark = 0
     for i in agents:
@@ -2168,7 +2284,12 @@ def compute_equipartition_additive(prefs, epsilon):
     division = ThreeAgentPortion(left_cut, right_cut)
     return division, chosen_agent
 
+
 def slice_values_additive(agent, prefs, division, epsilon):
+    '''
+    Returns the values of each slice for an agent and division given branzei nisan's
+    value query modifications.
+    '''
     left_slice_value = np.array([value_query_additive(agent, prefs, 0, division.left, 
                                                       epsilon)])
     middle_slice_value = np.array([value_query_additive(agent, prefs, division.left, division.right, 
@@ -2178,7 +2299,11 @@ def slice_values_additive(agent, prefs, division, epsilon):
     return np.concatenate([left_slice_value, middle_slice_value, 
                            right_slice_value])
 
+
 def check_unique_preferences_additive(prefs, division, epsilon):
+    '''
+    Checks if a division is approximately envy-free.
+    '''
     agents = [0,1,2]
     agents_number = 3
     slices_number = 3
@@ -2199,7 +2324,11 @@ def check_unique_preferences_additive(prefs, division, epsilon):
                     return True
     return False
 
+
 def middle_preferred_check(prefs, division, chosen_agent, epsilon):
+    '''
+    Checks if the remaining two agents both prefer the middle slice.
+    '''
     agents = [0,1,2]
     agents = np.delete(agents, chosen_agent)
     agents_number = 3
@@ -2215,7 +2344,12 @@ def middle_preferred_check(prefs, division, chosen_agent, epsilon):
     else:
         return False
 
+
 def middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
+    '''
+    Updates the cut bounds when running the middle slice preferred procedure of branzei
+    nisan algorithm.
+    '''
     right_cut = bisection_cut_query_additive(chosen_agent, prefs, cut_bounds.lower,
                                             cut_bounds.upper, epsilon)
     right_slice_value = value_query_additive(chosen_agent, prefs, right_cut, 1, epsilon) 
@@ -2229,6 +2363,9 @@ def middle_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
     
 
 def middle_preferred_case(prefs, division, chosen_agent, epsilon):
+    '''
+    runs the middle slice preferred procedure of branzei nisan algorithm.
+    '''
     upper_bound = division.right
     half_of_total = value_query_additive(chosen_agent, prefs, 0, 1, epsilon) / 2
     lower_bound = cut_query_additive(chosen_agent, prefs, 1, 
@@ -2240,6 +2377,9 @@ def middle_preferred_case(prefs, division, chosen_agent, epsilon):
     return division
 
 def left_preferred_check(prefs, division, chosen_agent, epsilon):
+    '''
+    Checks if the remaining two agents both prefer the left slice.
+    '''
     agents = [0,1,2]
     agents = np.delete(agents, chosen_agent)
     agents_number = 3
@@ -2256,6 +2396,10 @@ def left_preferred_check(prefs, division, chosen_agent, epsilon):
         return False
 
 def left_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
+    '''
+    Updates the cut bounds when running the left slice preferred procedure of branzei
+    nisan algorithm.
+    '''
     left_cut = bisection_cut_query_additive(chosen_agent, prefs, cut_bounds.lower,
                                             cut_bounds.upper, epsilon)
     right_cut = bisection_cut_query_additive(chosen_agent, prefs, left_cut, 1, epsilon) 
@@ -2268,6 +2412,9 @@ def left_preferred_bounds_update(prefs, cut_bounds, chosen_agent, epsilon):
     
 
 def left_preferred_case(prefs, division, chosen_agent, epsilon):
+    '''
+    runs the middle slice preferred procedure of branzei nisan algorithm.
+    '''
     lower_bound = 0
     upper_bound = division.left
     cut_bounds = Bounds(lower_bound, upper_bound)
@@ -2277,17 +2424,19 @@ def left_preferred_case(prefs, division, chosen_agent, epsilon):
 
 
 def branzei_nisan_additive(raw_prefs, cakeSize):
+    '''
+    Runs the branzei nisan algorithm for envy-free division between three agents.
+    '''
     non_hungry_prefs = one_lipschitz(raw_prefs, cakeSize)
     prefs = hungriness_additive(non_hungry_prefs, epsilon)
     equipartition, chosen_agent = compute_equipartition_additive(prefs, epsilon)
     if check_unique_preferences_additive(prefs, equipartition, epsilon) == True:
         slice_assignments = assign_slices(equipartition, prefs, 3, epsilon, additive = True)
         raw_envy_free_division = raw_division(equipartition, cakeSize, 3)
-        print('done')
-        # return jsonify({'equipartition': raw_envy_free_division,
-        #                 'assignment': slice_assignments,
-        #                 'chosen_agent': chosen_agent,
-        #                 'condition': 0})
+        return jsonify({'equipartition': raw_envy_free_division,
+                        'assignment': slice_assignments,
+                        'chosen_agent': chosen_agent,
+                        'condition': 0})
     if middle_preferred_check(prefs, equipartition, chosen_agent, epsilon) == True:
         envy_free_division = middle_preferred_case(prefs, equipartition, chosen_agent, epsilon)
         specifics = 0
@@ -2297,18 +2446,20 @@ def branzei_nisan_additive(raw_prefs, cakeSize):
     raw_equipartition = raw_division(equipartition, cakeSize, 3)
     slice_assignments = assign_slices(envy_free_division, prefs, 3, epsilon, additive = True)
     raw_envy_free_division = raw_division(envy_free_division, cakeSize, 3)
-    print('done')
-    # return jsonify({'equipartition': raw_equipartition,
-    #                 'division': raw_envy_free_division,
-    #                 'assignment': slice_assignments,
-    #                 'chosen_agent': chosen_agent,
-    #                 'condition': 1,
-    #                 'specifics': specifics})
+    return jsonify({'equipartition': raw_equipartition,
+                    'division': raw_envy_free_division,
+                    'assignment': slice_assignments,
+                    'chosen_agent': chosen_agent,
+                    'condition': 1,
+                    'specifics': specifics})
 
 
 #piecewise-constant algorithm
 
 def find_segments_intervals(prefs):
+    '''
+    Finds the list of start and endpoints for all agents preferences excluding duplicates.
+    '''
     breakpoints = set()
     for agents in prefs:
         for segments in agents:
@@ -2332,6 +2483,9 @@ def find_segments_intervals(prefs):
 
 
 def remove_zeros_from_segments(segmented_prefs, agents_number):
+    '''
+    Removes the segments that all agents value at zero.
+    '''
     amount_of_segments = len(segmented_prefs[0])
     segments_to_remove = []
     for i in range(amount_of_segments):
@@ -2350,6 +2504,10 @@ def remove_zeros_from_segments(segmented_prefs, agents_number):
 
 
 def find_segments(prefs, agents_number):
+    '''
+    Finds the piecewise-constant segments that will be investigated by the algorithm for
+    cut position.    
+    '''
     segments_intervals = find_segments_intervals(prefs)
     segmented_prefs = [[] for _ in range(agents_number)]
     for i in range(agents_number):
@@ -2366,8 +2524,14 @@ def find_segments(prefs, agents_number):
     segmented_prefs_without_zeros = remove_zeros_from_segments(segmented_prefs, agents_number)
     return segmented_prefs_without_zeros
 
+#For the slice value functions below, the checks that the cut positions are valid 
+#are commented out as they sometimes conflict with the solver.
 
 def first_slice_value(x, segments, agent, cut):
+    '''
+    Returns the function of the first slice value dependent on x, the cut position 
+    minus the investigated segment's startpoint.
+    '''
     first_agent_constant_value = 0
     cut_range = segments[agent][cut]['end'] - segments[agent][cut]['start']
     for i in range(cut):
@@ -2383,6 +2547,10 @@ def first_slice_value(x, segments, agent, cut):
     
 
 def middle_slice_value(x, y, segments, agent, cut_one, cut_two):
+    '''
+    Returns the function of the middle slice (second or third) value dependent on x and y, 
+    the cut positions minus the investigated segments' startpoints.
+    '''
     cut_one_range = segments[agent][cut_one]['end'] - segments[agent][cut_one]['start']
     cut_two_range = segments[agent][cut_two]['end'] - segments[agent][cut_two]['start']
     middle_agent_constant_value = 0
@@ -2401,6 +2569,10 @@ def middle_slice_value(x, y, segments, agent, cut_one, cut_two):
 
 
 def last_slice_value(y, segments, agent, cut):
+    '''
+    Returns the function of the last slice value dependent on y, the cut position 
+    minus the investigated segment's startpoint.
+    '''
     last_agent_constant_value = 0
     cut_range = segments[agent][cut]['end'] - segments[agent][cut]['start']
     amount_of_segments = len(segments[agent])
@@ -2417,6 +2589,11 @@ def last_slice_value(y, segments, agent, cut):
     
 
 def constraints_three_agents(segments, agents, cuts, params):
+    '''
+    The constraints for the solver to find an envy-free division for three agents. 
+    Checks that one section is valued over the other for all agents and that the left cut is
+    before the right cut. 
+    '''
     def constraint1(vars, params):
         cut_one, cut_two = vars
         x = cut_one - params[0]
@@ -2500,6 +2677,11 @@ def constraints_three_agents(segments, agents, cuts, params):
 
 
 def constraints_four_agents(segments, agents, cuts, params):
+    '''
+    The constraints for the solver to find an envy-free division for four agents. 
+    Checks that one section is valued over the other for all agents and that the left cut is
+    before the middle cut is before the right cut. 
+    '''
     def constraint1(vars, params):
         cut_one, cut_two, cut_three = vars
         x = cut_one - params[0]
@@ -2671,6 +2853,10 @@ def constraints_four_agents(segments, agents, cuts, params):
 
 
 def find_division_three_agents(segments, agents, cuts):
+    '''
+    Runs the least squares solver to check if the investigated segments can contain
+    the necessary cuts for an envy-free division for three agents.
+    '''
     cut_one_lower_bound = segments[0][cuts[0]]['start']
     cut_one_upper_bound = segments[0][cuts[0]]['end']
     cut_two_lower_bound = segments[0][cuts[1]]['start']
@@ -2693,6 +2879,10 @@ def find_division_three_agents(segments, agents, cuts):
     
 
 def find_division_four_agents(segments, agents, cuts):
+    '''
+    Runs the least squares solver to check if the investigated segments can contain
+    the necessary cuts for an envy-free division for four agents.
+    '''
     cut_one_lower_bound = segments[0][cuts[0]]['start']
     cut_one_upper_bound = segments[0][cuts[0]]['end']
     cut_two_lower_bound = segments[0][cuts[1]]['start']
@@ -2718,6 +2908,9 @@ def find_division_four_agents(segments, agents, cuts):
     
 
 def find_division(segments, agents, cuts, agents_number):
+    '''
+    Runs the solver for the correct number of agents.
+    '''
     if agents_number == 3:
         return find_division_three_agents(segments, agents, cuts)
     if agents_number == 4:
@@ -2725,6 +2918,10 @@ def find_division(segments, agents, cuts, agents_number):
     
 
 def solver(segments, agents_number):
+    '''
+    Iterates over each agent and segment permutation until one is found that
+    can contain the cut positions for an envy-free division.
+    '''
     amount_of_segments = len(segments[0])
     cut_positions = []
     assert (agents_number == 3) or (agents_number == 4),\
@@ -2750,6 +2947,9 @@ def solver(segments, agents_number):
     return False
 
 def piecewise_constant_algorithm(preferences, cake_size):
+    '''
+    Runs the piecewise-constant algorithm for finding an envy-free division.
+    '''
     agents_number = len(preferences)
     raw_segments = find_segments(preferences, agents_number)
     preferences = change_bounds(preferences, cake_size)
@@ -2764,15 +2964,14 @@ def piecewise_constant_algorithm(preferences, cake_size):
         slice_assignments = {1: agents[0], 2: agents[1], 
                             3: agents[2], 4: agents[3]}
         raw_envy_free_division = raw_division(envy_free_division, cake_size, 4)
-    print("done")
-    # return jsonify({'segments': raw_segments,
-    #                 'cut_positions': cut_positions,
-    #                 'division': raw_envy_free_division,
-    #                 'assignment': slice_assignments,
-    #                 'agents_number': agents_number})
+    return jsonify({'segments': raw_segments,
+                    'cut_positions': cut_positions,
+                    'division': raw_envy_free_division,
+                    'assignment': slice_assignments,
+                    'agents_number': agents_number})
     
 
-@app.route('/api/three_agent_additive', methods=['POST'])
+@app.route('/api/three_agent_monotone', methods=['POST'])
 def three_agent_additive():
     data = request.json
     preferences = data.get('preferences')
