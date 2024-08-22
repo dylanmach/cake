@@ -89,9 +89,9 @@ export const LearningPath = () => {
     [ThreeWayDivisionWithBN, '3-Way Division With Brânzei-Nisan'],
     [Piecewise, 'The Piecewise-Constant Algorithm'],
     [ThreeWayDivisionWithPC, '3-Way Division With Piecewise-constant'],
-    // [Recap3, 'Part 3 Recap'],
     [HollenderRubinstein, 'The Hollender-Rubinstein Algorithm'],
     [FourWayDivision, '4-Way Division'],
+    [Recap3, 'Part 3 Recap'],
     // [Recap4, 'Part 4 Recap'],
     [Ending, 'End'],
   ]
@@ -648,25 +648,25 @@ const hollenderRubinsteinPreferences = (
     gridTemplateColumns={{ xs: 'auto', md: 'auto auto' }}
     sx={{ gridRowGap: { xs: '40px', md: '16px' }, gridColumnGap: '16px' }}
   >
-    <img src={branzeiNisanPrefAki} style={{ maxHeight: 200 }} alt="" />
+    <img src={hollenderRubinsteinPrefAki} style={{ maxHeight: 200 }} alt="" />
     <Stack alignItems="center" marginBottom={2}>
       <CharacterImage character="Aki" hideName />
       Aki has these preferences
     </Stack>
 
-    <img src={branzeiNisanPrefBruno} style={{ maxHeight: 200 }} alt=""/>
+    <img src={hollenderRubinsteinPrefBruno} style={{ maxHeight: 200 }} alt=""/>
     <Stack alignItems="center" marginBottom={2}>
       <CharacterImage character="Bruno" hideName />
       Bruno has these preferences
     </Stack>
 
-    <img src={branzeiNisanPrefChloe} style={{ maxHeight: 200 }} alt=""/>
+    <img src={hollenderRubinsteinPrefChloe} style={{ maxHeight: 200 }} alt=""/>
     <Stack alignItems="center" marginBottom={2}>
       <CharacterImage character="Chloe" hideName />
       Chloe has these preferences
     </Stack>
 
-    <img src={branzeiNisanPrefChloe} style={{ maxHeight: 200 }} alt=""/>
+    <img src={hollenderRubinsteinPrefDouglas} style={{ maxHeight: 200 }} alt=""/>
     <Stack alignItems="center" marginBottom={2}>
       <CharacterImage character="Douglas" hideName width={100}/>
       Douglas has these preferences
