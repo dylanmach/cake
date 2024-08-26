@@ -13,7 +13,7 @@ import axios from 'axios'
 export const piecewiseConstant = async (preferences: Preferences, cakeSize: number): 
 Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
   try {
-    const response = await axios.post('/api/piecewise_constant', { preferences, cakeSize })
+    const response = await axios.post('//localhost:5000/api/piecewise_constant', { preferences, cakeSize })
     const division = response.data.division
     const assignment = response.data.assignment
     const segments =  response.data.segments

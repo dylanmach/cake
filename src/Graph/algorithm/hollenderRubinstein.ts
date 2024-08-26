@@ -13,7 +13,7 @@ import axios from 'axios'
 export const hollenderRubinstein = async (preferences: Preferences, cakeSize: number): 
 Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
   try {
-    const response = await axios.post('/api/four_agent', { preferences, cakeSize });
+    const response = await axios.post('//localhost:5000/api/four_agent', { preferences, cakeSize });
     const steps: Step[] = []
     const division = response.data.division
     const assignment = response.data.assignment

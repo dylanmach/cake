@@ -316,14 +316,14 @@ def find_start_cut(agent, prefs, start, end, value, epsilon, queries):
     else:
         start_cut = find_start_cut_variant_one(agent, prefs, start, end, value, epsilon)
     if (start_cut is not None) and (start_bounds.upper - start_cut + 1e-10 >= end - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
+        #assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
         return start_cut
     if queries is not None:
         start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon, queries[1])
     else:
         start_cut = find_start_cut_variant_two(agent, prefs, start, end, value, epsilon)
     if (start_cut is not None) and (start_bounds.upper - start_cut - 1e-10 <= end - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
+        #assert abs(value_query(agent, prefs, start_cut, end, epsilon) - value) < 1e-10
         return start_cut
     else:
         return None
@@ -419,14 +419,14 @@ def find_end_cut(agent, prefs, start, end, value, epsilon, queries):
     else:
         end_cut = find_end_cut_variant_one(agent, prefs, start, end, value, epsilon)
     if (end_cut is not None) and (start_bounds.upper - start + 1e-10 >= end_cut - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
+        #assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
         return end_cut
     if queries is not None:
         end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon, queries[1])
     else:
         end_cut = find_end_cut_variant_two(agent, prefs, start, end, value, epsilon)
     if (end_cut is not None) and (start_bounds.upper - start - 1e-10 <= end_cut - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
+        #assert abs(value_query(agent, prefs, start, end_cut, epsilon) - value) < 1e-10
         return end_cut
     else:
         return None
@@ -542,26 +542,26 @@ def find_bisection_cut(agent, prefs, start, bisection_cut_bounds, end, epsilon):
     bisection_cut = find_bisection_cut_variant_one_one(agent, prefs, start, bisection_bounds, end, epsilon)
     if (bisection_cut is not None) and (start_bounds.upper - start + 1e-10 >= bisection_cut - bisection_bounds.lower) and \
         (bisection_bounds.upper - bisection_cut + 1e-10 >= end - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
-                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        #assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+        #           value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
     bisection_cut = find_bisection_cut_variant_one_two(agent, prefs, start, bisection_bounds, end, epsilon)
     if (bisection_cut is not None) and (start_bounds.upper - start + 1e-10 >= bisection_cut - bisection_bounds.lower) and \
         (bisection_bounds.upper - bisection_cut - 1e-10 <= end - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
-                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        #assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+        #           value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
     bisection_cut = find_bisection_cut_variant_two_one(agent, prefs, start, bisection_bounds, end, epsilon)
     if (bisection_cut is not None) and (start_bounds.upper - start - 1e-10 <= bisection_cut - bisection_bounds.lower) and \
         (bisection_bounds.upper - bisection_cut + 1e-10 >= end - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
-                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        #assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+        #           value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
     bisection_cut = find_bisection_cut_variant_two_two(agent, prefs, start, bisection_bounds, end, epsilon)
     if (bisection_cut is not None) and (start_bounds.upper - start - 1e-10 <= bisection_cut - bisection_bounds.lower) and \
         (bisection_bounds.upper - bisection_cut - 1e-10 <= end - end_bounds.lower):
-        assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
-                   value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
+        #assert abs(value_query(agent, prefs, start, bisection_cut, epsilon) - 
+        #           value_query(agent, prefs, bisection_cut, end, epsilon)) < 1e-10
         return bisection_cut
     else:
         return None

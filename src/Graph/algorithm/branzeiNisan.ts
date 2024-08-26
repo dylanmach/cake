@@ -13,7 +13,7 @@ import axios from 'axios'
 export const branzeiNisan = async (preferences: Preferences, cakeSize: number): 
 Promise<{solution: AssignedSlice[]; steps: Step[]}> => {
   try {
-    const response = await axios.post('/api/three_agent', { preferences, cakeSize })
+    const response = await axios.post('//localhost:5000/api/three_agent', { preferences, cakeSize })
     const equipartition = response.data.equipartition
     const assignment = response.data.assignment
     const chosen_agent = response.data.chosen_agent
